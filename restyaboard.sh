@@ -18,9 +18,9 @@
 	OS_REQUIREMENT=$(cat /etc/issue | awk '{print $1}' | sed 's/Kernel//g')
 	if ([ "$OS_REQUIREMENT" = "Ubuntu" ] || [ "$OS_REQUIREMENT" = "Debian" ])
 	then
-		apt-get install -y curl
+		apt-get install -y curl unzip
 	else
-		yum install -y curl
+		yum install -y curl unzip
 	fi
 	RESTYABOARD_VERSION=$(curl --silent https://api.github.com/repos/RestyaPlatform/board/releases | grep tag_name -m 1 | awk '{print $2}' | sed -e 's/[^v0-9.]//g')
 	POSTGRES_DBHOST=localhost
@@ -39,11 +39,11 @@
 		case "${answer}" in
 			[Yy])
 			set +x
-			echo "To copy downloaded script, enter your document root path (e.g., /usr/share/nginx/html):"
+			echo "Enter your document root (where your Restyaboard to be installed. e.g., /usr/share/nginx/html/restyaboard):"
 			read -r dir
 			while [[ -z "$dir" ]]
 			do
-				read -r -p "To copy downloaded script, enter your document root path (e.g., /usr/share/nginx/html):" dir
+				read -r -p "Enter your document root (where your Restyaboard to be installed. e.g., /usr/share/nginx/html/restyaboard):" dir
 			done
 			set -x
 			
@@ -93,7 +93,7 @@
 		fi
 	else
 		set +x
-		echo "Already installed Restyaboard y/n?"
+		echo "Is Restyaboard already installed y/n?"
 		read -r answer
 		set -x
 		case "${answer}" in
@@ -256,11 +256,11 @@
 			sed -i "s|listen 80.*$|listen 80;|" /etc/nginx/conf.d/restyaboard.conf
 			
 			set +x
-			echo "To copy downloaded script, enter your document root path (e.g., /usr/share/nginx/html):"
+			echo "Enter your document root (where your Restyaboard to be installed. e.g., /usr/share/nginx/html/restyaboard):"
 			read -r dir
 			while [[ -z "$dir" ]]
 			do
-				read -r -p "To copy downloaded script, enter your document root path (e.g., /usr/share/nginx/html):" dir
+				read -r -p "Enter your document root (where your Restyaboard to be installed. e.g., /usr/share/nginx/html/restyaboard):" dir
 			done
 			set -x
 			echo "$dir"
@@ -499,11 +499,11 @@
 			sed -i "s|listen 80.*$|listen 80;|" /etc/nginx/conf.d/restyaboard.conf
 
 			set +x
-			echo "To copy downloaded script, enter your document root path (e.g., /usr/share/nginx/html):"
+			echo "Enter your document root (where your Restyaboard to be installed. e.g., /usr/share/nginx/html/restyaboard):"
 			read -r dir
 			while [[ -z "$dir" ]]
 			do
-				read -r -p "To copy downloaded script, enter your document root path (e.g., /usr/share/nginx/html):" dir
+				read -r -p "Enter your document root (where your Restyaboard to be installed. e.g., /usr/share/nginx/html/restyaboard):" dir
 			done
 			set -x
 			echo "$dir"
