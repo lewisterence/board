@@ -4,7 +4,7 @@
  *	App.boards						: this object contain all boards(Based on logged in user)
  *	this.model						: organizations collection.
  */
-if (typeof App == 'undefined') {
+if (typeof App === 'undefined') {
     App = {};
 }
 /**
@@ -41,7 +41,9 @@ App.OrganizationsListsView = Backbone.View.extend({
      *
      */
     render: function() {
-        this.$el.html(this.template());
+        this.$el.html(this.template({
+            organization: this.model
+        }));
         this.renderOrganizationCollection();
         this.showTooltip();
         return this;

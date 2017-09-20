@@ -4,7 +4,7 @@
  *	App.boards						: this object contain all boards(Based on logged in user)
  *	this.model						: list model. @see Available Object in App.ListView
  */
-if (typeof App == 'undefined') {
+if (typeof App === 'undefined') {
     App = {};
 }
 /**
@@ -34,6 +34,7 @@ App.ModalListView = Backbone.View.extend({
             this.model.showImage = this.showImage;
         }
         _(this).bindAll('show', 'teardown');
+        this.model.attachments.bind('remove', this.displayEmptyMessage, this);
     },
     teardown: function() {
         this.$el.data('modal', null);
@@ -88,20 +89,31 @@ App.ModalListView = Backbone.View.extend({
         var attachments = this.model.collection.board.attachments.where({
             list_id: this.model.id
         });
+        var self = this;
         var filtered_attachments = new App.AttachmentCollection();
         filtered_attachments.reset(attachments);
         if (filtered_attachments.length > 0) {
             filtered_attachments.each(function(attachment) {
                 var view = new App.AttachmentView({
-                    model: attachment
+                    model: attachment,
+                    board: self.model.board
                 });
-                view_attachment.append(view.render().el).find('.timeago').timeago();
+                view_attachment.append(view.render().el);
             });
         } else {
             var view = new App.AttachmentView({
                 model: null
             });
             view_attachment.append(view.render().el);
+        }
+    },
+    displayEmptyMessage: function() {
+        if (this.model.attachments.length === 0) {
+            var view_attachment = this.$('#js-list-attachments-list');
+            var view = new App.AttachmentView({
+                model: null
+            });
+            view_attachment.html(view.render().el);
         }
     }
 });

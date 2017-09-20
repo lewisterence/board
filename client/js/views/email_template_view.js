@@ -4,7 +4,7 @@
  *	App.boards						: this object contain all boards(Based on logged in user)
  *	this.model						: undefined.
  */
-if (typeof App == 'undefined') {
+if (typeof App === 'undefined') {
     App = {};
 }
 App.EmailTemplateView = Backbone.View.extend({
@@ -40,10 +40,10 @@ App.EmailTemplateView = Backbone.View.extend({
         email_template.url = api_url + 'email_templates/' + this.id + '.json';
         email_template.save(data, {
             success: function(model, response) {
-                if (!_.isEmpty(response.success)) {
-                    self.flash('success', response.success);
+                if (!_.isEmpty(response) && (response === 'Success')) {
+                    self.flash('success', i18next.t('Email Template has been updated successfully.'));
                 } else {
-                    self.flash('danger', 'Email Template not updated properly.');
+                    self.flash('danger', i18next.t('Email Template not updated properly.'));
                 }
             }
         });

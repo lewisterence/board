@@ -4,7 +4,7 @@
  *	App.boards						: this object contain all boards(Based on logged in user)
  *	this.model						: organization model.
  */
-if (typeof App == 'undefined') {
+if (typeof App === 'undefined') {
     App = {};
 }
 /**
@@ -22,6 +22,7 @@ App.OrganizationsListView = Backbone.View.extend({
         if (!_.isUndefined(this.model) && this.model !== null) {
             this.model.showImage = this.showImage;
         }
+        this.populateAclLinks();
         this.render();
     },
     template: JST['templates/organizations_list_view'],
@@ -49,6 +50,15 @@ App.OrganizationsListView = Backbone.View.extend({
         this.showTooltip();
         return this;
     },
+    // Resets this boards acl_links collection
+    populateAclLinks: function() {
+        if (this.model) {
+            var acl_links = this.model.get('acl_links') || [];
+            this.model.acl_links.reset(acl_links, {
+                silent: true
+            });
+        }
+    },
     /**
      * showConfirmDeleteOrganization()
      * display organization delete confirmation
@@ -74,7 +84,7 @@ App.OrganizationsListView = Backbone.View.extend({
         var organization = new App.Organization();
         organization.url = api_url + 'organizations/' + this.model.organization_id + '.json';
         organization.set('id', this.model.organization_id);
-        this.flash('success', 'Organization deleted successfully.');
+        this.flash('success', i18next.t('Organization deleted successfully.'));
         organization.destroy({
             success: function(model, response) {
                 app.navigate('#/', {

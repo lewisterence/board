@@ -1,5 +1,5 @@
 <% if(!_.isEmpty(activity) && activity != null){  %> 
-	<% 
+	<%
 				var cardLink = '<a href="#/board/' + activity.attributes.board_id + '/card/' + activity.attributes.card_id + '">' + _.escape(activity.attributes.card_name) + '</a>';
 				var organizationLink = '<a href="#/organization/' + activity.attributes.organization_id + '">' + _.escape(activity.attributes.organization_name) + '</a>';
 			if(activity.attributes.type != 'add_comment' && activity.attributes.type != 'edit_comment') {
@@ -10,19 +10,23 @@
 				activity.attributes.comment = activity.attributes.comment.replace('##DESCRIPTION##', _.escape(activity.attributes.card_description));
 				activity.attributes.comment = activity.attributes.comment.replace('##LIST_NAME##', _.escape(activity.attributes.list_name));
 				activity.attributes.comment = activity.attributes.comment.replace('##BOARD_NAME##', _.escape(activity.attributes.board_name));
-				activity.attributes.comment = activity.attributes.comment.replace('##USER_NAME##', _.escape(activity.attributes.full_name));
+				activity.attributes.comment = activity.attributes.comment.replace('##USER_NAME##', '<span class="h5">'+_.escape(activity.attributes.full_name)+'</span>');
 				activity.attributes.comment = activity.attributes.comment.replace('##CHECKLIST_ITEM_NAME##', _.escape(activity.attributes.checklist_item_name));
 				activity.attributes.comment = activity.attributes.comment.replace('##CHECKLIST_ITEM_PARENT_NAME##', _.escape(activity.attributes.checklist_item_parent_name));
 				activity.attributes.comment = activity.attributes.comment.replace('##CHECKLIST_NAME##', _.escape(activity.attributes.checklist_name));
 			} else {
-					var comment = activity.attributes.full_name + ' commented in card ' + cardLink;
+				var comment = activity.attributes.full_name + ' commented in card ' + cardLink;
+				var patt = /@\w+/g;
+				if(patt.test(activity.attributes.comment)) {
+					comment = activity.attributes.full_name + ' mentioned you in card ' + cardLink;
+				}
 			}
 		%>   
 		<ul class="media-list">
 			<li class="media">
 				<a data-placement="bottom" title="<%- activity.attributes.full_name%> (<%- activity.attributes.username%>)" data-toggle="tooltip" href="#/user/<%- activity.attributes.user_id %>" class="pull-left">								
 					<% if(!_.isEmpty(activity.attributes.profile_picture_path)) { 
-						var profile_picture_path = activity.showImage('User', activity.attributes.user_id, 'normal_thumb' );
+						var profile_picture_path = activity.showImage('User', activity.attributes.user_id, 'normal_thumb' )+'?uid=' + Math.floor((Math.random() * 9999) + 1);
 					%>
 						<img src="<%-profile_picture_path %>" alt="[Image: <%-activity.attributes.full_name %>]" title="<%-activity.attributes.full_name %> (<%-activity.attributes.username %>)" class="img-rounded img-responsive">
 					<% } else {%>
@@ -33,31 +37,33 @@
 					<div class="media-heading">
 						<% if(activity.attributes.type == 'add_comment' || activity.attributes.type == 'edit_comment') { %>	
 							<span><%= comment %></span>
-							<%= converter.makeHtml(makeLink(_.escape(activity.attributes.comment), activity.attributes.board_id)) %>
+							<%= makeLink(converter.makeHtml((activity.attributes.comment)), activity.attributes.board_id) %>
 						<% } else{%>
-							<%= converter.makeHtml(makeLink(activity.attributes.comment, activity.attributes.board_id)) %> 
+							<%= makeLink(converter.makeHtml(activity.attributes.comment), activity.attributes.board_id) %> 
 						<% } %>
-						<% if(activity.attributes.difference != null && _.contains(['update_card_comment', 'edit_list', 'edit_organization', 'edit_board', 'update_card_checklist', 'update_profile', 'edit_card'], activity.attributes.type)) { %>
-							<div class="thumbnail media-body">
+						<% if(activity.attributes.difference != null && _.contains(['update_card_comment', 'edit_list', 'edit_organization', 'edit_board', 'update_card_checklist', 'update_profile', 'edit_card', 'delete_card_comment', 'edit_list_color', 'delete_list_color'], activity.attributes.type)) { %>
+							<div class="thumbnail media-body no-mar">
 								<% _.each(activity.attributes.difference, function(difference) { %>
 									<%= converter.makeHtml(difference) %>
 								<% }); %>
 							</div>
 						<% } %>
-						<small class="col-xs-12 pull-left"><abbr class="timeago pull-left text-muted" title="<%- activity.attributes.created %>"><%- activity.attributes.created %></abbr><% if(!_.isEmpty(activity.attributes.board_name)){ %><a class="pull-left" href="#/board/<%= activity.attributes.board_id %>">&nbsp;on&nbsp;<%- activity.attributes.board_name %></a><% } %></small>
-						<div class="clearfix col-xs-12">
-							<div class="clearfix col-xs-12">
-								<small class="col-xs-12 pull-left">
+						<small class="pull-left">
+						<% var created = parse_date(activity.attributes.created, authuser); %>
+						<abbr class="pull-left text-muted" title="<%- created.datetime %>"><%- created.timeago %></abbr>
+						<% if(!_.isEmpty(activity.attributes.board_name)){ %><a class="pull-left" href="#/board/<%= activity.attributes.board_id %>">&nbsp;on&nbsp;<%- activity.attributes.board_name %></a><% } %></small>
+						<div class="clearfix">
+								<small class="pull-left">
 									<% if(!_.isUndefined(authuser.user) && activity.attributes.type == "add_comment" && type != "all") { %>
-										<div class="js-acticity-action-<%- activity.attributes.id %>">
+										<div class="js-acticity-action-<%- activity.attributes.id %> pull-left">  
 											<ul class="list-inline col-xs-offset-0">
 											<% if(!_.isEmpty(role_links.where({slug: "edit_comment"}))){ %>
-												<li><a title="Edit" class="js-show-edit-activity js-edit-activity-link-<%- activity.attributes.id %>" href="#" data-activity-id="<%- activity.attributes.id %>"><i class="icon-edit"></i>Edit</a></li>
-											<% } %> 
-												<li><a title="Reply" class="js-show-reply-activity-form js-reply-activity-link-<%- activity.attributes.id %>" href="#" data-activity-id="<%- activity.attributes.id %>"><i class="icon-repeat"></i>Reply</a></li>
+												<li><a title="<%- i18next.t('Edit') %>" class="js-show-edit-activity js-edit-activity-link-<%- activity.attributes.id %>" href="#" data-activity-id="<%- activity.attributes.id %>"><i class="icon-edit"></i><%- i18next.t("Edit") %></a></li>
+											<% } %>         
+												<li><a title="<%- i18next.t('Reply') %>" class="js-show-reply-activity-form js-reply-activity-link-<%- activity.attributes.id %>" href="#" data-activity-id="<%- activity.attributes.id %>"><i class="icon-repeat"></i><%- i18next.t("Reply") %></a></li>
 											<% if(!_.isEmpty(role_links.where({slug: "delete_comment"}))){ %>
 												<li class="dropdown">
-													<a title="Delete" class="dropdown-toggle js-show-confirm-comment-delete" data-toggle="dropdown" href="#" data-activity-id="<%- activity.attributes.id %>"><i class="icon-remove"></i>Delete</a>
+													<a title="<%- i18next.t('Delete') %>" class="dropdown-toggle js-show-confirm-comment-delete" data-toggle="dropdown" href="#" data-activity-id="<%- activity.attributes.id %>"><i class="icon-remove"></i><%- i18next.t("Delete") %></a>
 													<ul class="dropdown-menu arrow arrow-right">
 														<li id="js-acticity-actions-response-<%- activity.attributes.id %>" class="js-dropdown-popup dropdown-popup"></li>
 													</ul>
@@ -65,16 +71,15 @@
 											<% } %>
 											</ul>
 										</div>
-									<% } else if(activity.attributes.revisions != null && activity.attributes.revisions != "" && (parseInt(authuser.user.id) == 1 || current_user_can_undo_it == true )){ %>
+									<% } else if(activity.attributes.revisions != null && activity.attributes.revisions != "" && (parseInt(authuser.user.id) == 1)){ %>
 										<% if(!_.isEmpty(role_links.where({slug: "undo_activity"}))){ %>
 											<% if(_.isUndefined(activity.from_footer)) { %>
-												<div class="js-acticity-action-<%- activity.attributes.id %>"><ul class="list-inline col-xs-offset-0"><li><a title="Undo" class="js-undo2 pull-left" href="#" data-activity-id="<%- activity.attributes.id %>"><i class="icon-undo"></i>Undo</a></li></ul></div>
+												<div class="js-acticity-action-<%- activity.attributes.id %>"><ul class="list-inline col-xs-offset-0"><li><a title="<%- i18next.t('Undo') %>" class="js-undo2 pull-left" href="#" data-activity-id="<%- activity.attributes.id %>"><i class="icon-undo"></i><%- i18next.t("Undo") %></a></li></ul></div>
 											<% }%>	
 										<% } %>
 									<% } %>
 									<span class="pull-left col-xs-12 js-activity-reply-form-response-<%- activity.attributes.id %>"></span>
 								</small>
-							</div>
 						</div>
 					</div>
 				</div>
@@ -82,5 +87,5 @@
 			<li><hr></li>
 		</ul>
 <% }else{ %>
-	<span id="js-no-activities">No activities available.</span>
+	<span id="js-no-activities" class="alert alert-info col-xs-12"><%- i18next.t('No %s available.', { postProcess: 'sprintf', sprintf: [i18next.t('activities')] }) %></span>
 <% } %>

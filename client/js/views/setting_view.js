@@ -4,7 +4,7 @@
  *	App.boards						: this object contain all boards(Based on logged in user)
  *	this.model						: page view id.
  */
-if (typeof App == 'undefined') {
+if (typeof App === 'undefined') {
     App = {};
 }
 App.SettingView = Backbone.View.extend({
@@ -27,6 +27,7 @@ App.SettingView = Backbone.View.extend({
     events: {
         'submit form#js-setting-list-form': 'updateSetting',
     },
+
     /**
      * updateSetting()
      * @return false
@@ -34,18 +35,33 @@ App.SettingView = Backbone.View.extend({
     updateSetting: function(e) {
         var target = $(e.currentTarget);
         var data = target.serializeObject();
-        if (!_.isUndefined(data.LDAP_LOGIN_ENABLED) && $('.js-checkbox').is(":checked")) {
-            data.LDAP_LOGIN_ENABLED = 'true';
-        } else {
-            if (parseInt(this.id) === 2) {
-                data.LDAP_LOGIN_ENABLED = 'false';
-            }
+        if (!_.isUndefined(data.DEFAULT_CARD_VIEW)) {
+            DEFAULT_CARD_VIEW = data.DEFAULT_CARD_VIEW;
         }
-        if (!_.isUndefined(data.STANDARD_LOGIN_ENABLED) && $('.js-checkbox').is(":checked")) {
-            data.STANDARD_LOGIN_ENABLED = 'true';
-        } else {
-            if (parseInt(this.id) === 2) {
-                data.STANDARD_LOGIN_ENABLED = 'false';
+        if ($(e.target).find('#input_setting_category_id').val() === '14') {
+            data.IS_LIST_NOTIFICATIONS_ENABLED = 'false';
+            if (!_.isUndefined($("input[name='IS_LIST_NOTIFICATIONS_ENABLED']:checked").val())) {
+                data.IS_LIST_NOTIFICATIONS_ENABLED = 'true';
+            }
+            data.IS_CARD_NOTIFICATIONS_ENABLED = 'false';
+            if (!_.isUndefined($("input[name='IS_CARD_NOTIFICATIONS_ENABLED']:checked").val())) {
+                data.IS_CARD_NOTIFICATIONS_ENABLED = 'true';
+            }
+            data.IS_CARD_MEMBERS_NOTIFICATIONS_ENABLED = 'false';
+            if (!_.isUndefined($("input[name='IS_CARD_MEMBERS_NOTIFICATIONS_ENABLED']:checked").val())) {
+                data.IS_CARD_MEMBERS_NOTIFICATIONS_ENABLED = 'true';
+            }
+            data.IS_CARD_LABELS_NOTIFICATIONS_ENABLED = 'false';
+            if (!_.isUndefined($("input[name='IS_CARD_LABELS_NOTIFICATIONS_ENABLED']:checked").val())) {
+                data.IS_CARD_LABELS_NOTIFICATIONS_ENABLED = 'true';
+            }
+            data.IS_CARD_CHECKLISTS_NOTIFICATIONS_ENABLED = 'false';
+            if (!_.isUndefined($("input[name='IS_CARD_CHECKLISTS_NOTIFICATIONS_ENABLED']:checked").val())) {
+                data.IS_CARD_CHECKLISTS_NOTIFICATIONS_ENABLED = 'true';
+            }
+            data.IS_CARD_ATTACHMENTS_NOTIFICATIONS_ENABLED = 'false';
+            if (!_.isUndefined($("input[name='IS_CARD_ATTACHMENTS_NOTIFICATIONS_ENABLED']:checked").val())) {
+                data.IS_CARD_ATTACHMENTS_NOTIFICATIONS_ENABLED = 'true';
             }
         }
         var self = this;
@@ -54,9 +70,9 @@ App.SettingView = Backbone.View.extend({
         settingModel.save(data, {
             success: function(model, response) {
                 if (!_.isEmpty(response.success)) {
-                    self.flash('success', response.success);
+                    self.flash('success', i18next.t('Settings updated successfully.'));
                 } else {
-                    self.flash('danger', 'Settings not updated properly.');
+                    self.flash('danger', i18next.t('Settings not updated properly.'));
                 }
             }
         });
@@ -78,6 +94,7 @@ App.SettingView = Backbone.View.extend({
             cache: false,
             abortPending: true,
             success: function(collections, response) {
+                console.log(collections);
                 self.render(collections);
             }
         });

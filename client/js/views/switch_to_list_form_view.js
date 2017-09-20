@@ -4,7 +4,7 @@
  *	App.boards						: this object contain all boards(Based on logged in user)
  *	this.model						: board model. It contain all board based object @see Available Object in App.BoardView
  */
-if (typeof App == 'undefined') {
+if (typeof App === 'undefined') {
     App = {};
 }
 /**
@@ -61,7 +61,7 @@ App.SwitchToListView = Backbone.View.extend({
         var self = this;
         var sort_by = $(e.target).data('sort-by');
         var filtered_cards = self.model.cards.filter(function(card) {
-            return card.attributes.is_archived === false || card.attributes.is_archived === 0;
+            return parseInt(card.attributes.is_archived) === 0;
         });
         var is_card_empty = true;
         var view = '';
@@ -109,6 +109,17 @@ App.SwitchToListView = Backbone.View.extend({
                         }
                     });
                     return str;
+                } else if (sort_by === 'due_date') {
+                    if (item.get('due_date') !== null) {
+                        var date = item.get('due_date').split(' ');
+                        if (!_.isUndefined(date[1])) {
+                            _date = date[0] + 'T' + date[1];
+                        } else {
+                            _date = date[0];
+                        }
+                        sort_date = new Date(_date);
+                        return cards.sortDirection === 'desc' ? -sort_date.getTime() : sort_date.getTime();
+                    }
                 } else {
                     if (cards.sortDirection === 'desc') {
                         return -item.get(sort_by);

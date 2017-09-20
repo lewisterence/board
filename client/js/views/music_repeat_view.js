@@ -3,7 +3,7 @@
  * Available Object:
  *	App.boards						: this object contain all boards(Based on logged in user)
  */
-if (typeof App == 'undefined') {
+if (typeof App === 'undefined') {
     App = {};
 }
 /**
@@ -21,12 +21,12 @@ App.MusicRepeatView = Backbone.View.extend({
     continueMusic: function(e) {
         var temp = new App.MusicRepeatView();
         var music_content = App.music.music_content;
-        if (!_.isUndefined(App.music) && music_content !== undefined && music_content !== '' && music_content !== null) {
+        if (!_.isUndefined(App.music) && music_content !== undefined && music_content !== '' && music_content !== null && !navigator.userAgent.match(/Trident/)) {
             App.music.inst.setTimbre({
                 wave: 'piano'
             });
             if (!_.isUndefined(authuser.user)) {
-                if (!_.isUndefined(authuser.user.is_productivity_beats) && (authuser.user.is_productivity_beats === true || authuser.user.is_productivity_beats === 1)) {
+                if (parseInt(authuser.user.is_productivity_beats) === 1) {
                     App.music.inst.play(
                         music_content, temp.continueMusic
                     );
@@ -34,7 +34,7 @@ App.MusicRepeatView = Backbone.View.extend({
                     App.music.inst.silence();
                 }
             } else {
-                if (!_.isUndefined(window.sessionStorage.getItem('music_play')) && window.sessionStorage.getItem('music_play') === "1") {
+                if (!_.isUndefined($.cookie('music_play')) && $.cookie('music_play') === "1") {
                     App.music.inst.play(
                         music_content, temp.continueMusic
                     );

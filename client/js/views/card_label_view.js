@@ -4,7 +4,7 @@
  *	App.boards						: this object contain all boards(Based on logged in user)
  *	this.model						: label model. It contain all card based object @see Available Object in App.CardView
  */
-if (typeof App == 'undefined') {
+if (typeof App === 'undefined') {
     App = {};
 }
 /**
@@ -32,7 +32,7 @@ App.CardLabelView = Backbone.View.extend({
     render: function() {
         this.$el.html(this.template({
             label: this.model,
-            background: this.getLabelcolor('' + this.model.attributes.name).substring(0, 6)
+            background: (this.model.attributes.color) ? this.model.attributes.color : '#' + this.getLabelcolor('' + this.model.attributes.name).substring(0, 6)
         }));
         this.showTooltip();
         return this;

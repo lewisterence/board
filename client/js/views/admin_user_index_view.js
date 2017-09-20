@@ -4,7 +4,7 @@
  *	App.boards						: this object contain all boards(Based on logged in user)
  *	this.model						: user model.
  */
-if (typeof App == 'undefined') {
+if (typeof App === 'undefined') {
     App = {};
 }
 /**
@@ -35,7 +35,12 @@ App.AdminUserIndexView = Backbone.View.extend({
         var _this = this;
         _this.current_page = (!_.isUndefined(_this.current_page)) ? _this.current_page : 1;
         _this.users = new App.UserCollection();
+        $('.js-user-list').html('<tr class="js-loader"><td colspan="15"><span class="cssloader"></span></td></tr>');
         _this.users.url = api_url + 'users.json?page=' + _this.current_page;
+        app.navigate('#/' + 'users?page=' + _this.current_page, {
+            trigger: false,
+            trigger_function: false,
+        });
         _this.users.fetch({
             cache: false,
             abortPending: true,
@@ -46,13 +51,16 @@ App.AdminUserIndexView = Backbone.View.extend({
                 });
                 $('#header').html(_this.headerView.el);
                 $('#js-navbar-default').remove();
-                var view = $('#content').html(new App.UserIndexContainerView({}).el);
+                var view = $('#content').html(new App.UserIndexContainerView({
+                    filter_count: response.filter_count,
+                    roles: response.roles
+                }).el);
                 users.each(function(user) {
+                    user.roles = response.roles;
                     $('.js-user-list').append(new App.UserIndex({
                         model: user
                     }).el);
                 });
-                $('.js-user-list').find('.timeago').timeago();
                 $('.pagination-boxes').unbind();
                 $('.pagination-boxes').pagination({
                     total_pages: response._metadata.noOfPages,

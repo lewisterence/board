@@ -5,7 +5,7 @@
  *	this.model						: checklist item model.
  *	this.model.checklist			: checklist model. @see Available Object in CardCheckListView
  */
-if (typeof App == 'undefined') {
+if (typeof App === 'undefined') {
     App = {};
 }
 /**
@@ -23,12 +23,17 @@ App.CardCheckListItemView = Backbone.View.extend({
         if (!_.isUndefined(this.model) && this.model !== null) {
             this.model.showImage = this.showImage;
         }
-        _.bindAll(this, 'render', 'renderProgress');
-        this.model.checklist.card.list.collection.board.checklist_items.bind('add', this.render);
-        this.model.checklist.card.list.collection.board.checklist_items.bind('change', this.render);
-        this.model.checklist.card.list.collection.board.checklist_items.bind('change', this.renderProgress);
-        this.model.checklist.card.list.collection.board.checklist_items.bind('remove', this.renderProgress);
+        _.bindAll(this, 'render');
+        var board_user_role_id = this.model.board_users.findWhere({
+            user_id: parseInt(authuser.user.id)
+        });
+        if (!_.isEmpty(board_user_role_id)) {
+            this.model.board_user_role_id = board_user_role_id.attributes.board_user_role_id;
+        }
     },
+    converter: new showdown.Converter({
+        extensions: ['targetblank', 'xssfilter']
+    }),
     template: JST['templates/card_checklist_item'],
     className: function() {
         var class_name = 'js-checklist-item btn-block pull-left';
@@ -52,6 +57,7 @@ App.CardCheckListItemView = Backbone.View.extend({
         'click .js-markas-incomplete': 'markAsIncomplete',
         'click .js-show-item-options': 'showItemOptions',
         'click .js-show-mention-member-form': 'showMentionMemberForm',
+        'click .js-show-emoji-list-form': 'showEmojiList',
         'click .js-convert-to-card': 'convertToCard',
         'keyup .js-item-search-member': 'showSearchItemMembers',
         'click .js-back-to-item-options': 'backToItemOptions',
@@ -100,8 +106,10 @@ App.CardCheckListItemView = Backbone.View.extend({
      *
      */
     render: function() {
+        this.converter.setFlavor('github');
         this.$el.html(this.template({
-            checklist_item: this.model
+            checklist_item: this.model,
+            converter: this.converter
         }));
         this.showTooltip();
         return this;
@@ -121,7 +129,7 @@ App.CardCheckListItemView = Backbone.View.extend({
         items = new App.CheckListItemCollection();
         items.add(checklist_items);
         var completed_count = items.filter(function(checklist_item) {
-            return checklist_item.get('is_completed') === true || checklist_item.get('is_completed') == 'true' || checklist_item.get('is_completed') == 1;
+            return parseInt(checklist_item.get('is_completed')) === 1;
         }).length;
         var total_count = items.models.length;
         completed_count = 0 < total_count ? Math.round(100 * completed_count / total_count) : 0;
@@ -134,6 +142,7 @@ App.CardCheckListItemView = Backbone.View.extend({
             '-webkit-transition': 'all .6s  ease',
             'transition': 'all .6s  ease'
         }, 100);
+        emojify.run();
         return this;
     },
     /**
@@ -145,14 +154,19 @@ App.CardCheckListItemView = Backbone.View.extend({
      *
      */
     showItemEditForm: function(e) {
-        var prev_form = $('form.js-item-edit-form');
-        prev_form.parent().addClass('js-show-item-edit-form').html($('textarea', prev_form).val());
-        prev_form.remove();
-        $(e.target).addClass('hide').html('');
-        $(e.target).after(new App.ChecklistItemEditFormView({
-            model: this.model
-        }).el);
-        return false;
+        var target = $(e.target);
+        if (target.is('a')) {
+            return true;
+        } else {
+            var prev_form = $('form.js-item-edit-form');
+            $(prev_form).parent().find('.js-show-item-edit-form').removeClass('hide');
+            prev_form.remove();
+            $('#js-checklist-item-' + this.model.id).addClass('hide');
+            $('#js-checklist-item-' + this.model.id).after(new App.ChecklistItemEditFormView({
+                model: this.model
+            }).el);
+            return false;
+        }
     },
     /**
      * hideChecklistEditForm()
@@ -164,8 +178,10 @@ App.CardCheckListItemView = Backbone.View.extend({
     hideChecklistEditForm: function(e) {
         e.preventDefault();
         var form = $('form.js-item-edit-form');
-        form.prev('.js-show-item-edit-form').removeClass('hide').html($('textarea', form).val());
+        form.prev('.js-show-item-edit-form').removeClass('hide');
+        $('#js-checklist-item-' + this.model.id).html(this.converter.makeHtml($('textarea', form).val()));
         form.remove();
+        emojify.run();
     },
     /**
      * updateItem()
@@ -184,6 +200,7 @@ App.CardCheckListItemView = Backbone.View.extend({
         this.model.save(data, {
             patch: true
         });
+        emojify.run();
         return false;
     },
     /**
@@ -210,10 +227,16 @@ App.CardCheckListItemView = Backbone.View.extend({
     deleteItem: function() {
         this.$el.remove();
         this.model.url = api_url + 'boards/' + this.model.card.get('board_id') + '/lists/' + this.model.card.get('list_id') + '/cards/' + this.model.card.id + '/checklists/' + this.model.attributes.checklist_id + '/items/' + this.model.id + '.json';
-        var checkList_item = this.model.card.list.collection.board.checklist_items.get(this.model.id);
+        var checklist_item_id = this.model.id;
+        var checkList_item;
+        _.each(this.model.card.list.collection.board.checklist_items.models, function(checklistItem) {
+            if (checklist_item_id === checklistItem.attributes.id) {
+                checkList_item = checklistItem;
+            }
+        });
         var bool = checkList_item.attributes.is_completed;
         if (bool) {
-            this.model.set('is_completed', 'true');
+            this.model.set('is_completed', 1);
             this.model.checklist.set('checklist_item_completed_count', parseInt(this.model.checklist.get('checklist_item_completed_count')) - 1);
             this.model.checklist.card.set('checklist_item_completed_count', parseInt(this.model.checklist.card.attributes.checklist_item_completed_count) - 1);
             this.model.checklist.card.list.collection.board.cards.get(this.model.checklist.card).set('checklist_item_completed_count', this.model.checklist.card.attributes.checklist_item_completed_count, {
@@ -225,6 +248,8 @@ App.CardCheckListItemView = Backbone.View.extend({
         this.model.checklist.card.list.collection.board.cards.get(this.model.checklist.card).set('checklist_item_count', this.model.checklist.card.attributes.checklist_item_count, {
             silent: true
         });
+        this.render();
+        this.renderProgress();
         this.model.destroy();
         return false;
     },
@@ -239,12 +264,14 @@ App.CardCheckListItemView = Backbone.View.extend({
         e.preventDefault();
         var self = this;
         this.model.url = api_url + 'boards/' + this.model.card.get('board_id') + '/lists/' + this.model.card.get('list_id') + '/cards/' + this.model.card.id + '/checklists/' + this.model.attributes.checklist_id + '/items/' + this.model.id + '.json';
-        this.model.set('is_completed', true);
+        this.model.set('is_completed', 1);
         this.model.checklist.checklist_item_completed_count = parseInt(this.model.checklist.get('checklist_item_completed_count')) + 1;
         this.model.checklist.card.list.collection.board.cards.get(this.model.checklist.card).checklist_item_completed_count = this.model.checklist.card.attributes.checklist_item_completed_count;
         this.model.checklist.card.set('checklist_item_completed_count', parseInt(this.model.checklist.card.attributes.checklist_item_completed_count) + 1);
+        this.render();
+        this.renderProgress();
         this.model.save({
-            is_completed: 'true'
+            is_completed: 1
         }, {
             silent: true,
             patch: true,
@@ -258,7 +285,7 @@ App.CardCheckListItemView = Backbone.View.extend({
                     silent: true
                 });
                 var view_activity = $('#js-card-activities-' + self.model.card.id);
-                view_activity.prepend(view.render().el).find('.timeago').timeago();
+                view_activity.prepend(view.render().el);
             }
         });
     },
@@ -273,12 +300,14 @@ App.CardCheckListItemView = Backbone.View.extend({
         e.preventDefault();
         var self = this;
         this.model.url = api_url + 'boards/' + this.model.card.get('board_id') + '/lists/' + this.model.card.get('list_id') + '/cards/' + this.model.card.id + '/checklists/' + this.model.attributes.checklist_id + '/items/' + this.model.id + '.json';
-        this.model.set('is_completed', false);
+        this.model.set('is_completed', 0);
         this.model.checklist.checklist_item_completed_count = parseInt(this.model.checklist.get('checklist_item_completed_count')) - 1;
         this.model.checklist.card.set('checklist_item_completed_count', parseInt(this.model.checklist.card.attributes.checklist_item_completed_count) - 1);
         this.model.checklist.card.list.collection.board.cards.get(this.model.checklist.card).checklist_item_completed_count = this.model.checklist.card.attributes.checklist_item_completed_count;
+        this.render();
+        this.renderProgress();
         this.model.save({
-            is_completed: 'false'
+            is_completed: 0
         }, {
             silent: true,
             patch: true,
@@ -292,7 +321,7 @@ App.CardCheckListItemView = Backbone.View.extend({
                     silent: true
                 });
                 var view_activity = $('#js-card-activities-' + self.model.card.id);
-                view_activity.prepend(view.render().el).find('.timeago').timeago();
+                view_activity.prepend(view.render().el);
             }
         });
     },
@@ -336,6 +365,25 @@ App.CardCheckListItemView = Backbone.View.extend({
         $('#js-item-option-response-' + this.model.id).html(new App.ChecklistItemMentionMemberSerachFormView().el);
         this.$el.find('.js-item-member-search-response').html('');
         this.renderBoardUsers();
+        return false;
+    },
+    /**
+     * showEmojiList()
+     * Show the emoji list
+     * @param e
+     * @type Object(DOM event)
+     * @return false
+     *
+     */
+    showEmojiList: function(e) {
+        e.preventDefault();
+        var emojiList = "smile,thumbsup,warning,sunglasses";
+        var emojiListArray = emojiList.split(",");
+        $('#js-item-option-response-' + this.model.id).html(new App.ChecklistItemEmojiListView({
+            model: emojiListArray
+        }).el);
+        //$('.js-show-emoji-list-response ul').remove();
+        emojify.run();
         return false;
     },
     /**

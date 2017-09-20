@@ -4,11 +4,11 @@
  *	App.boards						: this object contain all boards(Based on logged in user)
  *	this.model						: undefined
  */
-if (typeof App == 'undefined') {
+if (typeof App === 'undefined') {
     App = {};
 }
 var loginExceptionUrl = ['register', 'login', 'forgotpassword', 'user_activation', 'aboutus'];
-var adminUrl = ['roles', 'activities', 'users', 'settings', 'email_templates'];
+var adminUrl = ['roles', 'activities', 'users', 'oauth_clients', 'apps', 'settings', 'email_templates'];
 /**
  * Application View
  * @class ApplicationView
@@ -23,10 +23,13 @@ App.ApplicationView = Backbone.View.extend({
      * initialize default values and actions
      */
     initialize: function(options) {
+        $('#content').html('');
+        $('#footer').removeClass('action-open');
         var page = this;
         page.page_view_type = options.type;
         page.page_view_id = options.id;
         page.page_view_hash = options.hash;
+        page.page_view_q = options.q;
         last_user_activity_id = load_more_last_board_activity_id = last_board_activity_id = 0;
         if (_.isUndefined(App.music)) {
             App.music = {};
@@ -37,18 +40,18 @@ App.ApplicationView = Backbone.View.extend({
                 App.music.inst.silence();
             }
         }
-        if (window.sessionStorage.getItem('auth') !== undefined && window.sessionStorage.getItem('auth') !== null && !api_token) {
-            var Auth = JSON.parse(window.sessionStorage.getItem('auth'));
+        if ($.cookie('auth') !== undefined && $.cookie('auth') !== null && !api_token) {
+            var Auth = JSON.parse($.cookie('auth'));
             api_token = Auth.access_token;
             page.authuser = Auth;
             authuser = Auth;
         } else {
-            if (_.isUndefined(window.sessionStorage.getItem("music_play")) || window.sessionStorage.getItem("music_play") === null) {
-                window.sessionStorage.setItem('music_play', "1");
+            if (_.isUndefined($.cookie("music_play")) || $.cookie("music_play") === null) {
+                $.cookie('music_play', "1");
             }
         }
-        if (role_links.length === 0 && window.sessionStorage.getItem('links') !== undefined && window.sessionStorage.getItem('links') !== null) {
-            role_links.add(JSON.parse(window.sessionStorage.getItem('links')));
+        if (role_links.length === 0 && $.cookie('links') !== undefined && $.cookie('links') !== null) {
+            role_links.add(JSON.parse($.cookie('links')));
         }
         if (page.model !== 'boards_view') {
             viewed_board = new App.Board();
@@ -62,38 +65,53 @@ App.ApplicationView = Backbone.View.extend({
                     abortPending: true,
                     success: function(model, response) {
                         api_token = response.access_token;
-                        window.sessionStorage.setItem('links', response.links);
-                        role_links.add(JSON.parse(response.links));
-                        settings.url = api_url + 'settings.json';
-                        settings.fetch({
-                            cache: false,
-                            abortPending: true,
-                            success: function(collection, settings_response) {
-                                SITE_NAME = settings_response.SITE_NAME;
-                                page.set_page_title();
-                                FLICKR_API_KEY = settings_response.FLICKR_API_KEY;
-                                DROPBOX_APPKEY = settings_response.DROPBOX_APPKEY;
-                                LABEL_ICON = settings_response.LABEL_ICON;
-                                SITE_TIMEZONE = settings_response.SITE_TIMEZONE;
-                                LDAP_LOGIN_ENABLED = settings_response.LDAP_LOGIN_ENABLED;
-                                STANDARD_LOGIN_ENABLED = settings_response.STANDARD_LOGIN_ENABLED;
-                                if (page.model === "admin_user_add" || page.model === "register") {
-                                    if ((!_.isEmpty(LDAP_LOGIN_ENABLED) && LDAP_LOGIN_ENABLED === "false") || (!_.isEmpty(STANDARD_LOGIN_ENABLED) && (STANDARD_LOGIN_ENABLED === "true"))) {
-                                        page.call_function();
-                                    } else {
-                                        changeTitle('404 not found');
-                                        this.headerView = new App.HeaderView({
-                                            model: authuser
-                                        });
-                                        $('#header').html(this.headerView.el);
-                                        var view = new App.Error404View();
-                                        $('#content').html(view.el);
-                                        return;
+                        if (!_.isUndefined(response.links)) {
+                            $.cookie('links', response.links);
+                        }
+                        $.cookie('languages', response.languages);
+                        localforage.setItem('apps', response.apps).then(function() {
+                            role_links.add(JSON.parse(response.links));
+                            settings.url = api_url + 'settings.json';
+                            settings.fetch({
+                                cache: false,
+                                abortPending: true,
+                                success: function(collection, settings_response) {
+                                    SITE_NAME = settings_response.SITE_NAME;
+                                    page.set_page_title();
+                                    FLICKR_API_KEY = settings_response.FLICKR_API_KEY;
+                                    DROPBOX_APPKEY = settings_response.DROPBOX_APPKEY;
+                                    LABEL_ICON = settings_response.LABEL_ICON;
+                                    SITE_TIMEZONE = settings_response.SITE_TIMEZONE;
+                                    DEFAULT_LANGUAGE = settings_response.DEFAULT_LANGUAGE;
+                                    PAGING_COUNT = settings_response.PAGING_COUNT;
+                                    APPS = settings_response.apps;
+                                    IMAP_EMAIL = settings_response.IMAP_EMAIL;
+                                    DEFAULT_CARD_VIEW = settings_response.DEFAULT_CARD_VIEW;
+                                    var current_language = DEFAULT_LANGUAGE;
+                                    if ($.cookie('auth') !== undefined && $.cookie('auth') !== null) {
+                                        current_language = authuser.user.language;
                                     }
-                                } else {
-                                    page.call_function();
+                                    i18next.use(window.i18nextXHRBackend).use(window.i18nextSprintfPostProcessor).init({
+                                        lng: current_language,
+                                        fallbackLng: current_language,
+                                        load: "all",
+                                        keySeparator: '~',
+                                        nsSeparator: '^',
+                                        backend: {
+                                            loadPath: "locales/{{lng}}/{{ns}}.json"
+                                        }
+                                    }, function() {
+                                        if (page.model === "admin_user_add" || page.model === "register") {
+                                            //@Todo
+                                            page.call_function();
+
+                                        } else {
+
+                                            page.call_function();
+                                        }
+                                    });
                                 }
-                            }
+                            });
                         });
                     },
                     error: function() {
@@ -110,45 +128,47 @@ App.ApplicationView = Backbone.View.extend({
                         abortPending: true,
                         success: function(collection, settings_response) {
                             SITE_NAME = settings_response.SITE_NAME;
-                            page.set_page_title();
-                            FLICKR_API_KEY = settings_response.FLICKR_API_KEY;
-                            DROPBOX_APPKEY = settings_response.DROPBOX_APPKEY;
-                            LABEL_ICON = settings_response.LABEL_ICON;
-                            SITE_TIMEZONE = settings_response.SITE_TIMEZONE;
-                            LDAP_LOGIN_ENABLED = settings_response.LDAP_LOGIN_ENABLED;
-                            STANDARD_LOGIN_ENABLED = settings_response.STANDARD_LOGIN_ENABLED;
-                            if (page.model === "admin_user_add" || page.model === "register") {
-                                if ((!_.isEmpty(LDAP_LOGIN_ENABLED) && LDAP_LOGIN_ENABLED === "false") || (!_.isEmpty(STANDARD_LOGIN_ENABLED) && (STANDARD_LOGIN_ENABLED === "true"))) {
-                                    page.call_function();
-                                } else {
-                                    changeTitle('404 not found');
-                                    this.headerView = new App.HeaderView({
-                                        model: authuser
-                                    });
-                                    $('#header').html(this.headerView.el);
-                                    var view = new App.Error404View();
-                                    $('#content').html(view.el);
-                                    return;
+                            localforage.setItem('apps', settings_response.apps_data).then(function() {
+                                page.set_page_title();
+                                FLICKR_API_KEY = settings_response.FLICKR_API_KEY;
+                                DROPBOX_APPKEY = settings_response.DROPBOX_APPKEY;
+                                LABEL_ICON = settings_response.LABEL_ICON;
+                                SITE_TIMEZONE = settings_response.SITE_TIMEZONE;
+                                DEFAULT_LANGUAGE = settings_response.DEFAULT_LANGUAGE;
+                                PAGING_COUNT = settings_response.PAGING_COUNT;
+                                APPS = settings_response.apps;
+                                IMAP_EMAIL = settings_response.IMAP_EMAIL;
+                                DEFAULT_CARD_VIEW = settings_response.DEFAULT_CARD_VIEW;
+                                var current_language = DEFAULT_LANGUAGE;
+                                if ($.cookie('auth') !== undefined && $.cookie('auth') !== null && authuser.user.language !== null && authuser.user.language !== undefined) {
+                                    current_language = authuser.user.language;
                                 }
-                            } else {
-                                page.call_function();
-                            }
+                                i18next.use(window.i18nextXHRBackend).use(window.i18nextSprintfPostProcessor).init({
+                                    lng: current_language,
+                                    fallbackLng: current_language,
+                                    load: "all",
+                                    keySeparator: '~',
+                                    nsSeparator: '^',
+                                    backend: {
+                                        loadPath: "locales/{{lng}}/{{ns}}.json"
+                                    }
+                                }, function() {
+                                    if (page.model === "admin_user_add" || page.model === "register") {
+                                        //@Todo
+                                        page.call_function();
+
+                                    } else {
+                                        page.call_function();
+                                    }
+                                });
+                            });
                         }
                     });
                 } else {
                     if (page.model === "admin_user_add" || page.model === "register") {
-                        if ((!_.isEmpty(LDAP_LOGIN_ENABLED) && LDAP_LOGIN_ENABLED === "false") || (!_.isEmpty(STANDARD_LOGIN_ENABLED) && (STANDARD_LOGIN_ENABLED === "true"))) {
-                            page.call_function();
-                        } else {
-                            changeTitle('404 not found');
-                            this.headerView = new App.HeaderView({
-                                model: authuser
-                            });
-                            $('#header').html(this.headerView.el);
-                            var view = new App.Error404View();
-                            $('#content').html(view.el);
-                            return;
-                        }
+                        //@Todo
+                        page.call_function();
+
                     } else {
                         page.call_function();
                     }
@@ -160,67 +180,79 @@ App.ApplicationView = Backbone.View.extend({
     },
     set_page_title: function() {
         if (this.model == 'login') {
-            changeTitle('Login');
+            changeTitle(i18next.t('Login'));
         }
         if (this.model == 'aboutus') {
-            changeTitle('About');
+            changeTitle(i18next.t('About'));
         }
         if (this.model == 'admin_user_add') {
-            changeTitle('Admin Add User');
+            changeTitle(i18next.t('Admin Add User'));
         }
         if (this.model == 'register') {
-            changeTitle('Register');
+            changeTitle(i18next.t('Register'));
         }
         if (this.model == 'forgotpassword') {
-            changeTitle('Forgot Password');
+            changeTitle(i18next.t('Forgot your password'));
         }
         if (this.model == 'user_activation') {
-            changeTitle('User Activation');
+            changeTitle(i18next.t('User Activation'));
         }
         if (this.model == 'changepassword') {
-            changeTitle('Change Password');
+            changeTitle(i18next.t('Change Password'));
         }
         if (this.model == 'settings') {
-            changeTitle('Settings');
+            changeTitle(i18next.t('Settings'));
         }
         if (this.model == 'boards_index') {
-            changeTitle('Boards');
+            changeTitle(i18next.t('Boards'));
         }
         if (this.model == 'starred_boards_index') {
-            changeTitle('Starred Boards');
+            changeTitle(i18next.t('Starred Boards'));
         }
         if (this.model == 'closed_boards_index') {
-            changeTitle('Closed Boards');
+            changeTitle(i18next.t('Closed Boards'));
         }
         if (this.model == 'organizations_view') {
-            changeTitle('Organization');
+            changeTitle(i18next.t('Organization'));
         }
         if (this.model == 'organizations_view_type') {
-            changeTitle('Organization');
+            changeTitle(i18next.t('Organization'));
         }
         if (this.model == 'organizations_user_view') {
-            changeTitle('Organization User');
+            changeTitle(i18next.t('Organization User'));
         }
         if (this.model == 'users_index') {
-            changeTitle('Users');
+            changeTitle(i18next.t('Users'));
         }
         if (this.model == 'admin_boards_index') {
-            changeTitle('Boards');
+            changeTitle(i18next.t('Boards'));
         }
-        if (this.model == 'role_settings') {
-            changeTitle('Role Settings');
+        if (this.model == 'role_settings' || this.model == 'add_role' || this.model == 'add_board_user_role' || this.model == 'add_organization_user_role') {
+            changeTitle(i18next.t('Role Settings'));
+        }
+        if (this.model == 'oauth_clients') {
+            changeTitle(i18next.t('Developer applications'));
+        }
+        if (this.model == 'add_oauth_client') {
+            changeTitle(i18next.t('Register a new OAuth application'));
+        }
+        if (this.model == 'edit_oauth_client') {
+            changeTitle(i18next.t('Edit OAuth application'));
+        }
+        if (this.model == 'apps' || this.model == 'app_settings') {
+            changeTitle(i18next.t('Apps'));
         }
         if (this.model == 'organizations_index') {
-            changeTitle('Organizations');
+            changeTitle(i18next.t('Organizations'));
         }
         if (this.model == 'email_templates') {
-            changeTitle('Email Templates');
+            changeTitle(i18next.t('Email Templates'));
         }
         if (this.model == 'email_template_type') {
-            changeTitle('Email Templates');
+            changeTitle(i18next.t('Email Templates'));
         }
         if (this.model == 'activity_index') {
-            changeTitle('Activities');
+            changeTitle(i18next.t('Activities'));
         }
     },
     /**
@@ -241,6 +273,7 @@ App.ApplicationView = Backbone.View.extend({
                 abortPending: true,
                 success: function(model, response) {
                     if (!_.isUndefined(response.error)) {
+                        $.cookie('redirect_link', window.location.hash);
                         $('#content').html(new App.Board404View({
                             model: authuser
                         }).el);
@@ -249,8 +282,34 @@ App.ApplicationView = Backbone.View.extend({
                         });
                         $('#header').html(this.headerView.el);
                     } else {
+                        var lists = {};
+                        var boards = {};
+                        if (response.lists) {
+                            $.each(response.lists, function(list_key, list) {
+                                if (list) {
+                                    var cards = {};
+                                    if (list.cards) {
+                                        $.each(list.cards, function(card_key, card) {
+                                            if (card) {
+                                                cards[card.id] = card.custom_fields;
+                                            }
+                                        });
+                                    }
+                                    lists[list.id] = {
+                                        custom_fields: list.custom_fields,
+                                        cards: cards
+                                    };
+                                }
+                            });
+                        }
+                        boards[response.id] = {
+                            custom_fields: response.custom_fields,
+                            lists: lists
+                        };
+                        custom_fields.boards = boards;
                         Board.authuser = self.authuser;
                         viewed_board = Board;
+                        Board.board_user_roles = response.board_user_roles;
                         $('#content').html(new App.BoardView({
                             model: Board
                         }).el);
@@ -271,9 +330,6 @@ App.ApplicationView = Backbone.View.extend({
                         } else if (view_type === 'calendar') {
                             $('.js-switch-calendar-view').trigger('click');
                             view_type = null;
-                        } else if (view_type === 'gantt') {
-                            $('.js-switch-timeline-view').trigger('click');
-                            view_type = null;
                         } else if (view_type === 'attachments') {
                             $('.js-show-board-modal').trigger('click');
                             view_type = null;
@@ -281,6 +337,7 @@ App.ApplicationView = Backbone.View.extend({
                             $('.js-switch-grid-view').trigger('click');
                             view_type = null;
                         }
+                        App.current_board = Board;
                         this.footerView = new App.FooterView({
                             model: authuser,
                             board_id: self.id,
@@ -305,6 +362,16 @@ App.ApplicationView = Backbone.View.extend({
                         }
                     }
                     self.board_view_height();
+                },
+                error: function(model, response) {
+                    $.cookie('redirect_link', window.location.hash);
+                    $('#content').html(new App.Board404View({
+                        model: authuser
+                    }).el);
+                    this.headerView = new App.HeaderView({
+                        model: authuser
+                    });
+                    $('#header').html(this.headerView.el);
                 }
             });
 
@@ -315,13 +382,11 @@ App.ApplicationView = Backbone.View.extend({
             } else if (view_type === 'calendar') {
                 $('.js-switch-calendar-view').trigger('click');
                 view_type = null;
-            } else if (view_type === 'gantt') {
-                $('.js-switch-timeline-view').trigger('click');
-                view_type = null;
             } else if (view_type === 'attachments') {
                 $('.js-show-board-modal').trigger('click');
                 view_type = null;
-            } else if (view_type === null || view_type === '') {
+            } else if (_.isUndefined(view_type) || view_type === null || view_type === '') {
+                $('.js-switch-grid-view').trigger('click');
                 view_type = null;
             }
         }
@@ -349,10 +414,7 @@ App.ApplicationView = Backbone.View.extend({
                     });
                 } else {
                     Organization.boards.add(Organization.attributes.boards_listing);
-                    $('#header').html(new App.OrganizationHeaderView({
-                        model: Organization,
-                        type: self.page_view_type
-                    }).el);
+                    Organization.organization_user_roles = response.organization_user_roles;
                     $('#content').html(new App.OrganizationsView({
                         model: Organization,
                         type: self.page_view_type
@@ -391,7 +453,7 @@ App.ApplicationView = Backbone.View.extend({
                     page.populateLists();
                     page.populateBoardStarred();
                     var organizations = new App.OrganizationCollection();
-                    organizations.url = api_url + 'organizations.json';
+                    organizations.url = api_url + 'organizations.json?type=simple';
                     organizations.fetch({
                         cache: false,
                         abortPending: true,
@@ -422,6 +484,7 @@ App.ApplicationView = Backbone.View.extend({
         if (page.model !== 'boards_view' && page.model !== 'users_index') {
             $('#header').html(this.headerView.el);
         }
+        $.cookie('previous_url', Backbone.history.getFragment());
     },
     populateLists: function() {
         App.boards.each(function(board) {
@@ -437,21 +500,26 @@ App.ApplicationView = Backbone.View.extend({
         var page = this;
         $('.company').addClass('hide');
         if (page.model == 'boards_view') {
-            $('body').css('background', 'transparent');
+            if (!$('body').hasClass('board-view')) {
+                $('body').css('background', 'transparent');
+            }
             if (!_.isEmpty(role_links.where({
                     slug: 'view_board'
                 }))) {
                 page.board_view();
             }
         } else if (page.model == 'organizations_view') {
+            changeTitle(i18next.t('Organization'));
             page.organization_view();
         } else if (_.isEmpty(authuser.user) && _.indexOf(loginExceptionUrl, page.model) <= -1) {
+            $.cookie('redirect_link', window.location.hash);
             app.navigate('#/users/login', {
                 trigger: true,
                 replace: true
             });
         } else if (!_.isEmpty(authuser.user) && _.indexOf(loginExceptionUrl, page.model) > -1) {
             if (page.model == 'aboutus') {
+                changeTitle(i18next.t('About'));
                 this.pageView = new App.AboutusView();
                 $('#content').html(this.pageView.el);
             } else {
@@ -464,12 +532,14 @@ App.ApplicationView = Backbone.View.extend({
             }
         } else {
             if (page.model == 'admin_user_add') {
+                changeTitle(i18next.t('Admin Add User'));
                 var AdminUser = new App.User();
                 this.pageView = new App.AdminUserAddView({
                     model: AdminUser
                 });
                 $('#content').html(this.pageView.el);
             } else if (page.model == 'register') {
+                changeTitle(i18next.t('Register'));
                 $('.company').removeClass('hide');
                 var User = new App.User();
                 this.pageView = new App.RegisterView({
@@ -477,6 +547,7 @@ App.ApplicationView = Backbone.View.extend({
                 });
                 $('#content').html(this.pageView.el);
             } else if (page.model == 'login') {
+                changeTitle(i18next.t('Login'));
                 $('.company').removeClass('hide');
                 var LoginUser = new App.User();
                 this.pageView = new App.LoginView({
@@ -484,6 +555,7 @@ App.ApplicationView = Backbone.View.extend({
                 });
                 $('#content').html(this.pageView.el);
             } else if (page.model == 'forgotpassword') {
+                changeTitle(i18next.t('Forgot your password'));
                 $('.company').removeClass('hide');
                 var ForgotPasswordUser = new App.User();
                 this.pageView = new App.ForgotpasswordView({
@@ -491,6 +563,7 @@ App.ApplicationView = Backbone.View.extend({
                 });
                 $('#content').html(this.pageView.el);
             } else if (page.model == 'user_activation') {
+                changeTitle(i18next.t('User Activation'));
                 var UserActivation = new App.User();
                 UserActivation.user_id = page.id;
                 UserActivation.hash = page.page_view_hash;
@@ -498,6 +571,7 @@ App.ApplicationView = Backbone.View.extend({
                     model: UserActivation
                 });
             } else if (page.model == 'changepassword') {
+                changeTitle(i18next.t('Change Password'));
                 var ChangePasswordUser = new App.User();
                 ChangePasswordUser.user_id = page.id;
                 this.pageView = new App.ChangepasswordView({
@@ -505,14 +579,18 @@ App.ApplicationView = Backbone.View.extend({
                 });
                 $('#content').html(this.pageView.el);
             } else if (page.model == 'aboutus') {
+                changeTitle(i18next.t('About'));
                 this.pageView = new App.AboutusView();
                 $('#content').html(this.pageView.el);
             } else if (page.model == 'boards_index' || page.model == 'starred_boards_index' || page.model == 'closed_boards_index') {
-                var page_title = 'My Boards';
+                changeTitle(i18next.t('Boards'));
+                var page_title = i18next.t('My Boards');
                 if (page.model == 'starred_boards_index') {
-                    page_title = 'Starred Boards';
+                    changeTitle(i18next.t('Starred Boards'));
+                    page_title = i18next.t('Starred Boards');
                 } else if (page.model == 'closed_boards_index') {
-                    page_title = 'Closed Boards';
+                    changeTitle(i18next.t('Closed Boards'));
+                    page_title = i18next.t('Closed Boards');
                 }
                 this.headerView = new App.BoardIndexHeaderView({
                     model: page_title,
@@ -535,17 +613,9 @@ App.ApplicationView = Backbone.View.extend({
                             cache: false,
                             abortPending: true,
                             success: function(board_model, board_response) {
-                                App.boards = boards;
-                                self.populateLists();
-                                self.populateBoardStarred();
-                                var board_activities = new App.FooterView({
-                                    model: authuser,
-                                    boards: boards
-                                });
-                                clearInterval(set_interval_id);
-                                set_interval_id = setInterval(function() {
-                                    board_activities.userActivities(true, 1);
-                                }, 10000);
+                                board_index.append(new App.UserDashboardView({
+                                    model: page_title,
+                                }).el);
                                 if (page.model == 'starred_boards_index') {
                                     board_index.append(new App.StarredBoardsIndexView().el);
                                     if (!_.isEmpty(role_links.where({
@@ -575,7 +645,10 @@ App.ApplicationView = Backbone.View.extend({
                                             if ($('.js-header-starred-boards > .js-board-view').length === 0) {
                                                 $('.js-header-starred-boards').append(new App.BoardSimpleView({
                                                     model: null,
-                                                    message: 'No starred boards available.',
+                                                    message: i18next.t('No %s available.', {
+                                                        postProcess: 'sprintf',
+                                                        sprintf: [i18next.t('starred boards')]
+                                                    }),
                                                     id: 'js-starred-board-empty',
                                                     className: 'col-lg-3 col-md-3 col-sm-4 col-xs-12'
                                                 }).el);
@@ -583,7 +656,10 @@ App.ApplicationView = Backbone.View.extend({
                                         } else {
                                             $('.js-header-starred-boards').append(new App.BoardSimpleView({
                                                 model: null,
-                                                message: 'No starred boards available.',
+                                                message: i18next.t('No %s available.', {
+                                                    postProcess: 'sprintf',
+                                                    sprintf: [i18next.t('starred boards')]
+                                                }),
                                                 id: 'js-starred-board-empty',
                                                 className: 'col-lg-3 col-md-3 col-sm-4 col-xs-12'
                                             }).el);
@@ -616,7 +692,10 @@ App.ApplicationView = Backbone.View.extend({
                                             if ($('.js-header-closed-boards > .js-board-view').length === 0) {
                                                 $('.js-header-closed-boards').append(new App.BoardSimpleView({
                                                     model: null,
-                                                    message: 'No closed boards available.',
+                                                    message: i18next.t('No %s available.', {
+                                                        postProcess: 'sprintf',
+                                                        sprintf: [i18next.t('closed boards')]
+                                                    }),
                                                     id: 'js-closed-board-empty',
                                                     className: 'col-lg-3 col-md-3 col-sm-4 col-xs-12'
                                                 }).el);
@@ -624,7 +703,10 @@ App.ApplicationView = Backbone.View.extend({
                                         } else {
                                             $('.js-header-closed-boards').append(new App.BoardSimpleView({
                                                 model: null,
-                                                message: 'No closed boards available.',
+                                                message: i18next.t('No %s available.', {
+                                                    postProcess: 'sprintf',
+                                                    sprintf: [i18next.t('closed boards')]
+                                                }),
                                                 id: 'js-closed-board-empty',
                                                 className: 'col-lg-3 col-md-3 col-sm-4 col-xs-12'
                                             }).el);
@@ -654,6 +736,11 @@ App.ApplicationView = Backbone.View.extend({
                                                     starred_boards: response.starred_boards
                                                 }).el);
                                             });
+                                            $('.js-my-boards').append(new App.BoardSimpleView({
+                                                model: null,
+                                                id: 'js-my-board-empty',
+                                                className: 'col-lg-3 col-md-4 col-sm-4 col-xs-12 mob-no-pad',
+                                            }).el);
                                             new App.FooterView({
                                                 model: authuser,
                                                 board_id: self.id,
@@ -662,7 +749,6 @@ App.ApplicationView = Backbone.View.extend({
                                         } else {
                                             $('.js-my-boards').append(new App.BoardSimpleView({
                                                 model: null,
-                                                message: 'No boards available.',
                                                 id: 'js-my-board-empty',
                                                 className: 'col-lg-3 col-md-3 col-sm-4 col-xs-12'
                                             }).el);
@@ -675,43 +761,38 @@ App.ApplicationView = Backbone.View.extend({
                     }
                 });
             } else if (page.model == 'users_index') {
+                changeTitle(i18next.t('Users'));
                 new App.AdminUserIndexView();
             } else if (page.model == 'admin_boards_index') {
+                changeTitle(i18next.t('Boards'));
                 new App.AdminBoardsListView();
             } else if (page.model == 'settings') {
+                changeTitle(i18next.t('Settings'));
                 $('#js-navbar-default').remove();
                 $('#content').html(new App.SettingView({
                     id: page.page_view_id
                 }).el);
             } else if (page.model == 'user_view') {
-                if (!_.isUndefined(authuser.user) && (authuser.user.id === page.id || authuser.user.id === '1')) {
-                    // User View
-                    var user = new App.User();
-                    user.url = api_url + 'users/' + page.id + '.json';
-                    user.fetch({
-                        cache: false,
-                        abortPending: true,
-                        success: function(user, response) {
-                            $('#header').html(new App.UserViewHeaderView({
-                                model: user,
-                                type: page.page_view_type
-                            }).el);
-                            $('#content').html(new App.UserView({
-                                model: user,
-                                type: page.page_view_type
-                            }).el);
-                        }
-                    });
-                } else {
-                    app.navigate('#/boards', {
-                        trigger: true,
-                        replace: true,
-                        trigger_function: false,
-                    });
-                    Backbone.history.loadUrl('#/boards');
-                    page.flash('danger', 'Permission denied');
-                }
+                var user = new App.User();
+                user.url = api_url + 'users/' + page.id + '.json';
+                user.fetch({
+                    cache: false,
+                    abortPending: true,
+                    success: function(user, response) {
+                        $('#header').html(new App.UserViewHeaderView({
+                            model: user,
+                            type: page.page_view_type,
+                            page: page,
+                        }).el);
+                        $('#content').html(new App.UserView({
+                            model: user,
+                            type: page.page_view_type,
+                            page: page,
+                        }).el);
+                    }
+                });
             } else if (page.model == 'role_settings') {
+                changeTitle(i18next.t('Role Settings'));
                 // User View
                 var acl_links = new App.ACLCollection();
                 acl_links.url = api_url + 'acl_links.json';
@@ -722,14 +803,36 @@ App.ApplicationView = Backbone.View.extend({
                         acl_links.reset(response.acl_links);
                         var roles = new App.RoleCollection();
                         roles.reset(response.roles);
+                        var acl_board_links = new App.AclBoardLinksCollection();
+                        acl_board_links.reset(response.acl_board_links);
+                        var acl_organization_links = new App.AclOrganizationLinksCollection();
+                        acl_organization_links.reset(response.acl_organization_links);
+                        var organization_user_roles = new App.OrganizationUserRolesCollection();
+                        organization_user_roles.reset(response.organization_user_roles);
+                        var board_user_roles = new App.BoardUserRolesCollection();
+                        board_user_roles.reset(response.board_user_roles);
                         $('#js-navbar-default').remove();
                         $('#content').html(new App.RoleSettingsView({
                             model: acl_links,
-                            roles: roles
+                            roles: roles,
+                            acl_board_links: acl_board_links,
+                            board_user_roles: board_user_roles,
+                            acl_organization_links: acl_organization_links,
+                            organization_user_roles: organization_user_roles
                         }).el);
                     }
                 });
+            } else if (page.model == 'add_role') {
+                changeTitle(i18next.t('Add role'));
+                $('#content').html(new App.RoleAddView().el);
+            } else if (page.model == 'add_board_user_role') {
+                changeTitle(i18next.t('Add board user role'));
+                $('#content').html(new App.BoardUserRoleAddView().el);
+            } else if (page.model == 'add_organization_user_role') {
+                changeTitle(i18next.t('Add organization user role'));
+                $('#content').html(new App.OrganizationUserRoleAddView().el);
             } else if (page.model == 'organizations_index') {
+                changeTitle(i18next.t('Organizations'));
                 var organizations = new App.OrganizationCollection();
                 organizations.url = api_url + 'organizations.json';
                 organizations.fetch({
@@ -741,12 +844,70 @@ App.ApplicationView = Backbone.View.extend({
                         }).el);
                     }
                 });
+            } else if (page.model == 'oauth_clients') {
+                changeTitle(i18next.t('Developer applications'));
+                var oauth_clients = new App.OauthClientCollection();
+                oauth_clients.url = api_url + 'oauth/clients.json';
+                oauth_clients.fetch({
+                    cache: false,
+                    abortPending: true,
+                    success: function(collections, response) {
+                        $('#js-navbar-default').remove();
+                        $('#content').html(new App.OauthClientView({
+                            model: response,
+                        }).el);
+                    }
+                });
+            } else if (page.model == 'add_oauth_client') {
+                changeTitle(i18next.t('Register a new OAuth application'));
+                var oauth_client = new App.OauthClient();
+                this.pageView = new App.OauthClientAddView({
+                    model: oauth_client
+                });
+                $('#content').html(this.pageView.el);
+            } else if (page.model == 'edit_oauth_client') {
+                changeTitle(i18next.t('Edit OAuth application'));
+                this.pageView = new App.OauthClientEditView({
+                    id: page.page_view_id
+                });
+                $('#content').html(this.pageView.el);
+            } else if (page.model == 'apps') {
+                changeTitle(i18next.t('Apps'));
+                var apps = new App.AppCollection();
+                apps.url = api_url + 'apps.json';
+                apps.fetch({
+                    cache: false,
+                    abortPending: true,
+                    success: function(collections, response) {
+                        $('#js-navbar-default').remove();
+                        $('#content').html(new App.AppsView({
+                            model: response,
+                        }).el);
+                    }
+                });
+            } else if (page.model == 'app_settings') {
+                changeTitle(i18next.t('App Settings'));
+                var app_settings = new App.AppCollection();
+                app_settings.url = api_url + 'apps/settings.json?app=' + page.page_view_id;
+                app_settings.fetch({
+                    cache: false,
+                    abortPending: true,
+                    success: function(collections, response) {
+                        $('#js-navbar-default').remove();
+                        $('#content').html(new App.AppSettingsView({
+                            app_settings: response,
+                            folder: page.page_view_id
+                        }).el);
+                    }
+                });
             } else if (page.model == 'email_template_type') {
+                changeTitle(i18next.t('Email Templates'));
                 $('#js-navbar-default').remove();
                 $('#content').html(new App.EmailTemplateView({
                     id: page.page_view_id
                 }).el);
             } else if (page.model == 'activity_index') {
+                changeTitle(i18next.t('Activities'));
                 $('#js-navbar-default').remove();
                 $('#content').html(new App.ActivityIndexView({
                     id: page.page_view_id
@@ -758,7 +919,7 @@ App.ApplicationView = Backbone.View.extend({
         } else {
             authuser.board_id = 0;
         }
-        if ((window.sessionStorage.getItem('auth') !== undefined && window.sessionStorage.getItem('auth') !== null) || page.model == 'organizations_view') {
+        if (($.cookie('auth') !== undefined && $.cookie('auth') !== null) || page.model == 'organizations_view') {
             this.footerView = new App.FooterView({
                 model: authuser
             }).render();

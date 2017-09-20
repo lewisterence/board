@@ -4,7 +4,7 @@
  *	App.boards						: this object contain all boards(Based on logged in user)
  *	this.model						: board model. It contain all board based object @see Available Object in App.BoardView
  */
-if (typeof App == 'undefined') {
+if (typeof App === 'undefined') {
     App = {};
 }
 /**
@@ -22,7 +22,6 @@ App.BoardSidebarView = Backbone.View.extend({
         if (!_.isUndefined(this.model) && this.model !== null) {
             this.model.showImage = this.showImage;
         }
-        this.is_admin = options.is_admin;
         this.render();
     },
     template: JST['templates/board_sidebar'],
@@ -38,7 +37,7 @@ App.BoardSidebarView = Backbone.View.extend({
     render: function() {
         this.$el.html(this.template({
             board: this.model,
-            is_admin: this.is_admin
+            subscriber: this.model.board_subscriber,
         }));
         this.showTooltip();
         return this;

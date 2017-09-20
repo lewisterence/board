@@ -4,7 +4,7 @@
  *	App.boards						: this object contain all boards(Based on logged in user)
  *	this.model						: workflow template collection
  */
-if (typeof App == 'undefined') {
+if (typeof App === 'undefined') {
     App = {};
 }
 /**
@@ -86,15 +86,21 @@ App.BoardAddView = Backbone.View.extend({
     },
     submitBoardAdd: function(e) {
         e.preventDefault();
+        $(e.target).find('#submitBoardAdd').addClass('disabled');
         var data = $(e.target).serializeObject();
         var board = new App.Board();
         board.url = api_url + 'boards.json';
+        if (this.model.organization_id) {
+            data.organization_id = this.model.organization_id;
+        }
         board.save(data, {
             success: function(model, response) {
+                $(e.target).find('#submitBoardAdd').removeClass('disabled');
                 App.boards.add(response.simple_board);
                 if (response.simple_board.lists !== null) {
                     App.boards.get(parseInt(response.simple_board.id)).lists.add(response.simple_board.lists);
                 }
+                $.removeCookie("chat_initialize");
                 app.navigate('#/board/' + response.id, {
                     trigger: true,
                     replace: true

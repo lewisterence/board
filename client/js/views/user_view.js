@@ -4,7 +4,7 @@
  *	App.boards						: this object contain all boards(Based on logged in user)
  *	this.model						: user model.
  */
-if (typeof App == 'undefined') {
+if (typeof App === 'undefined') {
     App = {};
 }
 /**
@@ -28,6 +28,7 @@ App.UserView = Backbone.View.extend({
         'click .js-remove-image': 'removeImage',
         'click .js-use-uploaded-avatar': 'computerOpenUserProfile',
         'change #js-user-profile-attachment': 'addUserProfile',
+        'click .js-enable-user-desktop-notification': 'enabledesktopNotification'
 
     },
     /**
@@ -35,11 +36,13 @@ App.UserView = Backbone.View.extend({
      * initialize default values and actions
      */
     initialize: function(options) {
+        $('.action-close', $('.dockmodal.active')).trigger('click');
         var last_activity_id = 0;
         if (!_.isUndefined(this.model) && this.model !== null) {
             this.model.showImage = this.showImage;
         }
         this.type = 'profile';
+        this.page = options.page;
         if (!_.isUndefined(options.type)) {
             this.type = options.type;
         }
@@ -49,6 +52,28 @@ App.UserView = Backbone.View.extend({
         this.render();
     },
     /**
+     * enabledesktopNotification()
+     * enable desktop notification
+     * @param e
+     * @type Object(DOM event)
+     *
+     */
+    enabledesktopNotification: function(e) {
+        e.preventDefault();
+        var self = this;
+        Notification.requestPermission(function(permission) {
+            // Whatever the user answers, we make sure we store the information
+            if (!('permission' in Notification)) {
+                Notification.permission = permission;
+            }
+            // If the user is okay, let's create a notification
+            if (permission === 'granted') {
+                var notification = new Notification('Desktop notification enabled.');
+                location.reload();
+            }
+        });
+    },
+    /**
      * render()
      * populate the html to the dom
      * @param NULL
@@ -56,7 +81,7 @@ App.UserView = Backbone.View.extend({
      *
      */
     render: function() {
-        if (!_.isUndefined(this.type) && (this.type == 'cards' || this.type == 'settings')) {
+        if (!_.isUndefined(this.type) && (this.type == 'cards' || this.type == 'settings' || this.type == 'oauth_applications')) {
             this.renderType();
         } else {
             var self = this;
@@ -68,7 +93,8 @@ App.UserView = Backbone.View.extend({
                 success: function(user, response) {
                     self.$el.html(self.template({
                         user: self.model,
-                        type: self.type
+                        type: self.type,
+                        page: self.page,
                     }));
                     if (!_.isEmpty(activities.models)) {
                         var last_activity = _.min(activities.models, function(activity) {
@@ -81,7 +107,7 @@ App.UserView = Backbone.View.extend({
                             self.$('#js-user-activites').append(new App.UserActivityView({
                                 model: activity,
                                 type: self.type
-                            }).el).find('.timeago').timeago();
+                            }).el);
                         }
                     } else {
                         $('#js-user-activites-load-more').addClass('hide');
@@ -107,10 +133,13 @@ App.UserView = Backbone.View.extend({
         var is_send_newsletter_val = this.model.attributes.is_send_newsletter;
         this.$el.html(this.template({
             user: this.model,
-            type: this.type
+            type: this.type,
+            page: this.page
         }));
         if (this.type == 'cards') {
             this.userCards();
+        } else if (this.type == 'oauth_applications') {
+            this.oauthApplications();
         } else {
             var _this = this;
             _(function() {
@@ -141,11 +170,11 @@ App.UserView = Backbone.View.extend({
                     if (!_.isUndefined(data.result.profile_picture_path)) {
                         $('#dropzone-cssloader').removeClass('cssloader');
                         _this.model.set('profile_picture_path', data.result.profile_picture_path);
-                        var Auth = JSON.parse(window.sessionStorage.getItem('auth'));
+                        var Auth = JSON.parse($.cookie('auth'));
                         Auth.user.profile_picture_path = data.result.profile_picture_path + "?uid=" + Math.floor((Math.random() * 9999) + 1);
-                        window.sessionStorage.setItem('auth', JSON.stringify(Auth));
+                        $.cookie('auth', JSON.stringify(Auth));
                         authuser = Auth;
-                        var hash = calcMD5(SecuritySalt + 'User' + _this.model.id + 'png' + 'small_thumb' + SITE_NAME);
+                        var hash = calcMD5(SecuritySalt + 'User' + _this.model.id + 'png' + 'small_thumb');
                         var profile_picture_path = window.location.pathname + 'img/small_thumb/User/' + _this.model.id + '.' + hash + '.png';
                         $('.js-use-uploaded-avatar').html('<img src="' + profile_picture_path + '" width="50" height="50" class="js-user-avatar">');
                         this.footerView = new App.FooterView({
@@ -181,6 +210,34 @@ App.UserView = Backbone.View.extend({
         var form = $(e.target);
         var fileData = new FormData(form[0]);
         var data = $(e.target).serializeObject();
+        data.default_desktop_notification = 'false';
+        if ($("#default_desktop_notification").val() === 'Enabled') {
+            data.default_desktop_notification = 'true';
+        }
+        data.is_list_notifications_enabled = 'false';
+        if (!_.isUndefined($("input[name='is_list_notifications_enabled']:checked").val())) {
+            data.is_list_notifications_enabled = 'true';
+        }
+        data.is_card_notifications_enabled = 'false';
+        if (!_.isUndefined($("input[name='is_card_notifications_enabled']:checked").val())) {
+            data.is_card_notifications_enabled = 'true';
+        }
+        data.is_card_members_notifications_enabled = 'false';
+        if (!_.isUndefined($("input[name='is_card_members_notifications_enabled']:checked").val())) {
+            data.is_card_members_notifications_enabled = 'true';
+        }
+        data.is_card_labels_notifications_enabled = 'false';
+        if (!_.isUndefined($("input[name='is_card_labels_notifications_enabled']:checked").val())) {
+            data.is_card_labels_notifications_enabled = 'true';
+        }
+        data.is_card_checklists_notifications_enabled = 'false';
+        if (!_.isUndefined($("input[name='is_card_checklists_notifications_enabled']:checked").val())) {
+            data.is_card_checklists_notifications_enabled = 'true';
+        }
+        data.is_card_attachments_notifications_enabled = 'false';
+        if (!_.isUndefined($("input[name='is_card_attachments_notifications_enabled']:checked").val())) {
+            data.is_card_attachments_notifications_enabled = 'true';
+        }
         this.model.set(data);
         this.render();
         this.model.url = api_url + 'users/' + this.model.id + '.json';
@@ -192,32 +249,80 @@ App.UserView = Backbone.View.extend({
             cache: false,
             contentType: false,
             error: function(e, s) {
-                self.flash('danger', 'Unable to update. Please try again.');
+                self.flash('danger', i18next.t('Unable to update. Please try again.'));
             },
             success: function(model, response) {
                 if (!_.isEmpty(response.success)) {
-                    self.flash('success', response.success);
-                } else if (!_.isEmpty(response.error)) {
-                    self.flash('danger', response.error);
-                } else {
-                    self.flash('danger', 'User Profile could not be updated. Please, try again.');
-                }
-                if (!_.isUndefined(response.activity.profile_picture_path)) {
-                    self.model.set('profile_picture_path', response.activity.profile_picture_path);
-                    var Auth = JSON.parse(window.sessionStorage.getItem('auth'));
-                    Auth.user.profile_picture_path = response.activity.profile_picture_path;
-                    window.sessionStorage.setItem('auth', JSON.stringify(Auth));
+                    var Auth = JSON.parse($.cookie('auth'));
+                    Auth.user.default_desktop_notification = response.activity.default_desktop_notification;
+                    Auth.user.is_list_notifications_enabled = response.activity.is_list_notifications_enabled;
+                    Auth.user.is_card_notifications_enabled = response.activity.is_card_notifications_enabled;
+                    Auth.user.is_card_members_notifications_enabled = response.activity.is_card_members_notifications_enabled;
+                    Auth.user.is_card_labels_notifications_enabled = response.activity.is_card_labels_notifications_enabled;
+                    Auth.user.is_card_checklists_notifications_enabled = response.activity.is_card_checklists_notifications_enabled;
+                    Auth.user.is_card_attachments_notifications_enabled = response.activity.is_card_attachments_notifications_enabled;
+                    $.cookie('auth', JSON.stringify(Auth));
                     authuser = Auth;
-                    this.footerView = new App.FooterView({
-                        model: Auth,
-                    }).render();
-                    $('#footer').html(this.footerView.el);
+                    if (!_.isUndefined(response.activity.username) && response.activity.username !== null) {
+                        self.model.set('username', response.activity.username);
+                        Auth = JSON.parse($.cookie('auth'));
+                        Auth.user.username = response.activity.username;
+                        $.cookie('auth', JSON.stringify(Auth));
+                        authuser = Auth;
+                    }
+                    if (!_.isUndefined(response.activity.profile_picture_path) && response.activity.profile_picture_path !== null) {
+                        self.model.set('profile_picture_path', response.activity.profile_picture_path);
+                        Auth = JSON.parse($.cookie('auth'));
+                        Auth.user.profile_picture_path = response.activity.profile_picture_path;
+                        Auth.user.timezone = data.timezone;
+                        $.cookie('auth', JSON.stringify(Auth));
+                        authuser = Auth;
+                        this.footerView = new App.FooterView({
+                            model: Auth,
+                        }).render();
+                        $('#footer').html(this.footerView.el);
+                    } else {
+                        self.model.set('profile_picture_path', null);
+                        self.model.set('initials', $('#inputinitials').val());
+                        self.model.set('is_send_newsletter', data.is_send_newsletter);
+                        $('.js-user-img').html('<i class="avatar avatar-color-194 avatar-sm">' + $('#inputinitials').val() + '</i>');
+                    }
+                    self.flash('success', i18next.t('User Profile has been updated.'));
+                } else if (response.error) {
+                    if (response.error === 1) {
+                        self.flash('danger', i18next.t('File extension not supported. It supports only jpg, png, bmp and gif.'));
+                    } else if (response.error === 2) {
+                        self.flash('danger', i18next.t('Email address already exist. User Profile could not be updated. Please, try again.'));
+                    } else if (response.error === 3) {
+                        self.flash('danger', i18next.t('Username already exist. User Profile could not be updated. Please, try again.'));
+                    }
                 } else {
-                    self.model.set('profile_picture_path', null);
-                    self.model.set('initials', $('#inputinitials').val());
-                    self.model.set('is_send_newsletter', data.is_send_newsletter);
-                    $('.js-user-img').html('<i class="avatar avatar-color-194 avatar-sm">' + $('#inputinitials').val() + '</i>');
+                    self.flash('danger', i18next.t('User Profile could not be updated. Please, try again.'));
                 }
+
+            }
+        });
+    },
+    /**
+     * oauthApplications()
+     * display connected applications
+     * @param e
+     * @type Object(DOM event)
+     * @return false
+     */
+    oauthApplications: function() {
+        var self = this;
+        var oauth_applications = new App.OauthApplicationCollection();
+        oauth_applications.url = api_url + 'oauth/applications.json';
+        oauth_applications.fetch({
+            cache: false,
+            success: function(model, response) {
+                if (!_.isEmpty(response)) {
+                    self.$('#oauth_applications').append(new App.OauthApplicationsView({
+                        model: response
+                    }).el);
+                }
+                $('#tab-loaded-content').load();
             }
         });
     },
@@ -247,7 +352,10 @@ App.UserView = Backbone.View.extend({
                         }).el);
                     });
                 } else {
-                    self.$('#cards').html('No cards available.');
+                    self.$('#cards').html('<span class="alert alert-info col-xs-12">' + i18next.t('No %s available.', {
+                        postProcess: 'sprintf',
+                        sprintf: [i18next.t('cards')]
+                    }) + '</span>');
                 }
                 $('#tab-loaded-content').load();
             }
@@ -270,7 +378,7 @@ App.UserView = Backbone.View.extend({
                         var activity = activities.models[i];
                         self.$('#js-user-activites').append(new App.UserActivityView({
                             model: activity
-                        }).el).find('.timeago').timeago();
+                        }).el);
                     }
                     var last_activity = _.min(activities.models, function(activity) {
                         return activity.id;
@@ -302,9 +410,9 @@ App.UserView = Backbone.View.extend({
         });
         this.model.set('profile_picture_path', null);
         $('.js-use-uploaded-avatar').html('<i class="avatar avatar-color-194 avatar-md img-rounded">' + $('#inputinitials').val() + '</i>');
-        var Auth = JSON.parse(window.sessionStorage.getItem('auth'));
+        var Auth = JSON.parse($.cookie('auth'));
         Auth.user.profile_picture_path = null;
-        window.sessionStorage.setItem('auth', JSON.stringify(Auth));
+        $.cookie('auth', JSON.stringify(Auth));
         authuser = Auth;
         this.footerView = new App.FooterView({
             model: Auth,
@@ -340,7 +448,7 @@ App.UserView = Backbone.View.extend({
         $('#dropzone-cssloader').addClass('cssloader');
         var ext = $('#js-user-profile-attachment').val().split('.').pop().toLowerCase();
         if ($.inArray(ext, ['gif', 'png', 'jpg', 'jpeg']) == -1) {
-            self.flash('danger', 'File extension not supported. It supports only jpg, png, bmp and gif.');
+            self.flash('danger', i18next.t('File extension not supported. It supports only jpg, png, bmp and gif.'));
             $('#dropzone-cssloader').removeClass('cssloader');
             return false;
         } else {
@@ -356,15 +464,19 @@ App.UserView = Backbone.View.extend({
                 contentType: false,
                 success: function(model, response) {
                     $('#dropzone-cssloader').removeClass('cssloader');
-                    if (!_.isEmpty(response.error)) {
-                        self.flash('danger', response.error);
+                    if (response.error) {
+                        if (response.error === 1) {
+                            self.flash('danger', i18next.t('File extension not supported. It supports only jpg, png, bmp and gif.'));
+                        } else if (response.error === 2) {
+                            self.flash('danger', i18next.t('Email address already exist. User Profile could not be updated. Please, try again.'));
+                        }
                     }
                     self.model.set('profile_picture_path', response.profile_picture_path);
-                    var Auth = JSON.parse(window.sessionStorage.getItem('auth'));
+                    var Auth = JSON.parse($.cookie('auth'));
                     Auth.user.profile_picture_path = response.profile_picture_path + "?uid=" + Math.floor((Math.random() * 9999) + 1);
-                    window.sessionStorage.setItem('auth', JSON.stringify(Auth));
+                    $.cookie('auth', JSON.stringify(Auth));
                     authuser = Auth;
-                    var hash = calcMD5(SecuritySalt + 'User' + self.model.id + 'png' + 'small_thumb' + SITE_NAME);
+                    var hash = calcMD5(SecuritySalt + 'User' + self.model.id + 'png' + 'small_thumb');
                     var profile_picture_path = window.location.pathname + 'img/small_thumb/User/' + self.model.id + '.' + hash + '.png?uid=' + Math.floor((Math.random() * 9999) + 1);
                     $('.js-use-uploaded-avatar').html('<span class="js-remove-image  profile-block show"><i class="icon icon-remove close-block cur h6"></i></span><img src="' + profile_picture_path + '" width="50" height="50" class="js-user-avatar">');
                     this.footerView = new App.FooterView({

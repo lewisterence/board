@@ -4,7 +4,7 @@
  *	App.boards						: this object contain all boards(Based on logged in user)
  *	this.model						: board model. @see Available Object in App.BoardView
  */
-if (typeof App == 'undefined') {
+if (typeof App === 'undefined') {
     App = {};
 }
 /**
@@ -90,11 +90,11 @@ App.ModalBoardView = Backbone.View.extend({
             for (var attachments_i = 0; attachments_i < attachments_length; attachments_i++) {
                 var attachment = attachments.models[attachments_i];
                 var view = new App.AttachmentView({
-                    model: attachment
+                    model: attachment,
+                    board: this.model
                 });
                 view_attachment.append(view.render().el);
             }
-            view_attachment.find('.timeago').timeago();
         } else {
             var empty_view = new App.AttachmentView({
                 model: null

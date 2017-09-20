@@ -4,7 +4,7 @@
  *	App.boards						: this object contain all boards(Based on logged in user)
  *	this.model						: organizations collection.
  */
-if (typeof App == 'undefined') {
+if (typeof App === 'undefined') {
     App = {};
 }
 /**
@@ -58,7 +58,6 @@ App.OrganizationsListsHeaderView = Backbone.View.extend({
             sortField: this.sortField,
             sortDirection: this.sortDirection
         }).el);
-        $('.timeago', $('#content')).timeago();
     },
     sortBy: function(e) {
         e.preventDefault();

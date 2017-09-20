@@ -4,7 +4,7 @@
  *	App.boards						: this object contain all boards(Based on logged in user)
  *	this.model						: undefined.
  */
-if (typeof App == 'undefined') {
+if (typeof App === 'undefined') {
     App = {};
 }
 /**
@@ -30,11 +30,12 @@ App.ChatView = Backbone.View.extend({
      *
      */
     render: function() {
-        this.$el.html(this.template()).attr('title', 'Chat');
+        this.$el.html(this.template()).attr('title', i18next.t('Chat'));
         this.$el.dockmodal({
             initialState: 'docked',
             height: 300,
-            width: 400
+            width: 400,
+            animationSpeed: ANIMATION_SPEED
         });
         this.showTooltip();
         return this;

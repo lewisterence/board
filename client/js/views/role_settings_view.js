@@ -4,7 +4,7 @@
  *	App.boards						: this object contain all boards(Based on logged in user)
  *	this.model						: acl links collection.
  */
-if (typeof App == 'undefined') {
+if (typeof App === 'undefined') {
     App = {};
 }
 /**
@@ -22,7 +22,18 @@ App.RoleSettingsView = Backbone.View.extend({
      * functions to fire on events (Mouse events, Keyboard Events, Frame/Object Events, Form Events, Drag Events, etc...)
      */
     events: {
-        'click .js-update-role': 'saveRoleSettings'
+        'click .js-update-role': 'saveRoleSettings',
+        'click .js-role-name': 'roleAddForm',
+        'click .js-edit': 'roleEditForm',
+        'submit form#RoleAddForm': 'roleAdd',
+        'submit form#BoardUserRoleAddForm': 'boardUserRoleAdd',
+        'submit form#OrganizationUserRoleAddForm': 'organizationUserRoleAdd',
+        'submit form#RoleEditForm': 'roleEdit',
+        'submit form#BoardUserRoleEditForm': 'boardUserRoleEdit',
+        'submit form#OrganizationUserRoleEditForm': 'organizationUserRoleEdit',
+        'click .js-delete-board-user-role': 'deleteBoardUserRole',
+        'click .js-delete-organization-user-role': 'deleteOrganizationUserRole',
+        'click .js-delete-role': 'deleteRole'
     },
     /**
      * Constructor
@@ -33,6 +44,10 @@ App.RoleSettingsView = Backbone.View.extend({
             this.model.showImage = this.showImage;
         }
         this.roles = options.roles;
+        this.acl_board_links = options.acl_board_links;
+        this.board_user_roles = options.board_user_roles;
+        this.acl_organization_links = options.acl_organization_links;
+        this.organization_user_roles = options.organization_user_roles;
         this.render();
     },
     /**
@@ -45,10 +60,17 @@ App.RoleSettingsView = Backbone.View.extend({
     render: function() {
         this.$el.html(this.template({
             acl_links: this.model,
-            roles: this.roles
+            roles: this.roles,
+            acl_board_links: this.acl_board_links,
+            board_user_roles: this.board_user_roles,
+            acl_organization_links: this.acl_organization_links,
+            organization_user_roles: this.organization_user_roles
         }));
         $('.js-admin-role-menu').addClass('active');
         $('.js-admin-activity-menu, .js-admin-user-menu, .js-admin-email-menu, .js-admin-setting-menu, .js-admin-board-menu').removeClass('active');
+        _(function() {
+            $('#js-question-mark').tooltip();
+        }).defer();
         this.showTooltip();
         return this;
     },
@@ -62,11 +84,228 @@ App.RoleSettingsView = Backbone.View.extend({
         var self = $(e.target);
         var data = {
             'acl_link_id': self.data('acl_link_id'),
-            'role_id': self.data('role_id')
+            'role_id': self.data('role_id'),
+            'table': self.data('table')
         };
         var role_setting = new App.RoleSetting();
         role_setting.set(data);
         role_setting.url = api_url + 'acl_links.json';
         role_setting.save(data);
+    },
+    roleAddForm: function(e) {
+        e.preventDefault();
+        return false;
+    },
+    roleEditForm: function(e) {
+        e.preventDefault();
+        return false;
+    },
+    /**
+     * roleAdd()
+     * save role
+     * @return false
+     */
+    roleAdd: function(e) {
+        var target = $(e.target);
+        var data = target.serializeObject();
+        var self = this;
+        var role = new App.Role();
+        role.url = api_url + 'roles.json';
+        role.save(data, {
+            success: function(model, response) {
+                self.flash('success', i18next.t('Role added successfully.'));
+                app.navigate('#/roles', {
+                    trigger: true,
+                    replace: true
+                });
+            }
+        });
+        return false;
+    },
+    /**
+     * organizationUserRoleAdd()
+     * save organization user role
+     * @return false
+     */
+    organizationUserRoleAdd: function(e) {
+        var target = $(e.target);
+        var data = target.serializeObject();
+        var self = this;
+        var organization_user_role = new App.OrganizationUserRoles();
+        organization_user_role.url = api_url + 'organization_user_roles.json';
+        organization_user_role.save(data, {
+            success: function(model, response) {
+                self.flash('success', i18next.t('Organization user role added successfully.'));
+                app.navigate('#/roles', {
+                    trigger: true,
+                    replace: true
+                });
+            }
+        });
+        return false;
+    },
+    /**
+     * boardUserRoleAdd()
+     * save board user role
+     * @return false
+     */
+    boardUserRoleAdd: function(e) {
+        var target = $(e.target);
+        var data = target.serializeObject();
+        var self = this;
+        var board_user_role = new App.BoardUserRoles();
+        board_user_role.url = api_url + 'board_user_roles.json';
+        board_user_role.save(data, {
+            success: function(model, response) {
+                self.flash('success', i18next.t('Board user role added successfully.'));
+                app.navigate('#/roles', {
+                    trigger: true,
+                    replace: true
+                });
+            }
+        });
+        return false;
+    },
+    /**
+     * roleEdit()
+     * save user
+     * @return false
+     */
+    roleEdit: function(e) {
+        var target = $(e.currentTarget);
+        var data = target.serializeObject();
+        var self = this;
+        var role = new App.Role();
+        role.set('id', data.id);
+        role.url = api_url + 'roles/' + data.id + '.json';
+        role.save(data, {
+            success: function(model, response) {
+                self.flash('success', i18next.t('Role has been updated successfully.'));
+                app.navigate('#/roles', {
+                    trigger: true,
+                    replace: true
+                });
+            }
+        });
+        return false;
+    },
+    /**
+     * boardUserRoleEdit()
+     * Update board user role
+     * @return false
+     */
+    boardUserRoleEdit: function(e) {
+        var target = $(e.currentTarget);
+        var data = target.serializeObject();
+        var self = this;
+        var board_user_role = new App.BoardUserRoles();
+        board_user_role.set('id', data.id);
+        board_user_role.url = api_url + 'board_user_roles/' + data.id + '.json';
+        board_user_role.save(data, {
+            success: function(model, response) {
+                self.flash('success', i18next.t('Role has been updated successfully.'));
+                app.navigate('#/roles', {
+                    trigger: true,
+                    replace: true
+                });
+            }
+        });
+        return false;
+    },
+    /**
+     * organizationUserRoleEdit()
+     * Update organization user role
+     * @return false
+     */
+    organizationUserRoleEdit: function(e) {
+        var target = $(e.currentTarget);
+        var data = target.serializeObject();
+        var self = this;
+        var organization_user_role = new App.OrganizationUserRoles();
+        organization_user_role.set('id', data.id);
+        organization_user_role.url = api_url + 'organization_user_roles/' + data.id + '.json';
+        organization_user_role.save(data, {
+            success: function(model, response) {
+                self.flash('success', i18next.t('Role has been updated successfully.'));
+                app.navigate('#/roles', {
+                    trigger: true,
+                    replace: true
+                });
+            }
+        });
+        return false;
+    },
+    /**
+     * deleteBoardUserRole()
+     * Delete Board User Role
+     * @return false 
+     */
+    deleteBoardUserRole: function(e) {
+        var target = $(e.currentTarget);
+        var board_user_role_id = target.attr('data-board_user_role_id');
+        var self = this;
+
+        var board_user_role = new App.BoardUserRoles();
+        board_user_role.set('id', board_user_role_id);
+        board_user_role.url = api_url + 'board_user_roles/' + board_user_role_id + '.json';
+
+        board_user_role.destroy({
+            success: function(model, response) {
+                self.flash('success', i18next.t('Role deleted successfully.'));
+                app.navigate('#/roles', {
+                    trigger: true,
+                    replace: true
+                });
+            }
+        });
+        return false;
+    },
+    /**
+     * deleteOrganizationUserRole()
+     * Delete Organization User Role
+     * @return false 
+     */
+    deleteOrganizationUserRole: function(e) {
+        var target = $(e.currentTarget);
+        var organization_user_role_id = target.attr('data-organization_user_role_id');
+        var self = this;
+
+        var organization_user_role = new App.OrganizationUserRoles();
+        organization_user_role.set('id', organization_user_role_id);
+        organization_user_role.url = api_url + 'organization_user_roles/' + organization_user_role_id + '.json';
+        organization_user_role.destroy({
+            success: function(model, response) {
+                self.flash('success', i18next.t('Role deleted successfully.'));
+                app.navigate('#/roles', {
+                    trigger: true,
+                    replace: true
+                });
+            }
+        });
+        return false;
+    },
+    /**
+     * deleteRole()
+     * Delete Role
+     * @return false 
+     */
+    deleteRole: function(e) {
+        var target = $(e.currentTarget);
+        var role_id = target.attr('data-role_id');
+        var self = this;
+
+        var role = new App.Role();
+        role.set('id', role_id);
+        role.url = api_url + 'roles/' + role_id + '.json';
+        role.destroy({
+            success: function(model, response) {
+                self.flash('success', i18next.t('Role deleted successfully.'));
+                app.navigate('#/roles', {
+                    trigger: true,
+                    replace: true
+                });
+            }
+        });
+        return false;
     }
 });

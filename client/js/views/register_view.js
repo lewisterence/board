@@ -4,7 +4,7 @@
  *	App.boards						: this object contain all boards(Based on logged in user)
  *	this.model						: user model.
  */
-if (typeof App == 'undefined') {
+if (typeof App === 'undefined') {
     App = {};
 }
 /**
@@ -41,6 +41,7 @@ App.RegisterView = Backbone.View.extend({
      * @return false
      */
     register: function(e) {
+        $('#submitRegister').attr('disabled', 'disabled');
         var target = $(e.target);
         var data = target.serializeObject();
         var self = this;
@@ -48,12 +49,25 @@ App.RegisterView = Backbone.View.extend({
         user.url = api_url + 'users/register.json';
         user.save(data, {
             success: function(model, response) {
-                if (!_.isEmpty(response.error)) {
-                    self.flash('danger', response.error);
+                if (response.error) {
+                    if (response.error === 1) {
+                        $('#submitRegister').removeAttr('disabled');
+                        self.flash('danger', i18next.t('Email address already exist. Your registration process is not completed. Please, try again.'));
+                    } else if (response.error === 2) {
+                        $('#submitRegister').removeAttr('disabled');
+                        self.flash('danger', i18next.t('Username already exists. Your registration process is not completed. Please, try again.'));
+                    }
                     $('#inputPassword').val('');
                 } else {
-                    self.flash('success', 'You have successfully registered with our site and your activation mail has been sent to your mail inbox.');
-                    target[0].reset();
+                    if (response.activation === 1) {
+                        $('#submitRegister').removeAttr('disabled');
+                        target[0].reset();
+                        self.flash('success', i18next.t('You have successfully registered with our site. You can now login to the site.'));
+                    } else {
+                        $('#submitRegister').removeAttr('disabled');
+                        self.flash('success', i18next.t('You have successfully registered with our site and your activation mail has been sent to your mail inbox.'));
+                        target[0].reset();
+                    }
                 }
             }
         });

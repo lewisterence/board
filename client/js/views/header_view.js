@@ -3,7 +3,7 @@
  * Available Object:
  *	this.model						: user model.
  */
-if (typeof App == 'undefined') {
+if (typeof App === 'undefined') {
     App = {};
 }
 /**
@@ -59,26 +59,74 @@ App.HeaderView = Backbone.View.extend({
      */
     render: function() {
         this.model.is_show_enable_notification = false;
-        var current_param = Backbone.history.fragment;
-        var current_param_split = current_param.split('/');
+        var current_param = Backbone.history.fragment.split('?');
+        if (current_param[0].indexOf('/') === 0) {
+            current_param[0] = current_param[0].substr(1);
+        }
+        var current_param_split = current_param[0].split('/');
         this.model.current_param = (current_param.indexOf('changepassword') === -1 && current_param.indexOf('login') === -1 && current_param.indexOf('forgotpassword') === -1 && current_param.indexOf('register') === -1 && current_param.indexOf('activation') === -1) ? current_param_split[0] : '';
         if (!_.isEmpty(current_param_split[1]) && current_param_split[1] === 'list') {
             this.model.current_param = 'admin_boards_list';
+        }
+        if (!_.isEmpty(current_param_split[2]) && current_param_split[2] === 'changepassword') {
+            this.model.current_param = 'changepassword';
         }
         if (typeof Notification != 'undefined') {
             this.model.is_show_enable_notification = (Notification.permission == 'default') ? true : false;
         }
         this.$el.html(this.template(this.model));
         this.showTooltip();
+        if (load_count === 1) {
+            load_count++;
+            _.each(APPS, function(app, key) {
+                var s, l, v = '';
+                if (key === 'settings') {
+                    s = document.createElement('script');
+                    _.each(app, function(client_id, key) {
+                        v += "var " + client_id.name + " = '" + client_id.value + "';";
+                    });
+                    s.text = v;
+                    document.body.appendChild(s);
+                }
+                if (key === 'js') {
+                    _.each(app, function(js, key) {
+                        s = document.createElement('script');
+                        s.type = 'text/javascript';
+                        s.src = js;
+                        document.body.appendChild(s);
+                    });
+                }
+                if (key === 'css') {
+                    _.each(app, function(css, key) {
+                        l = document.createElement('link');
+                        l.rel = 'stylesheet';
+                        l.type = 'text/css';
+                        l.href = css;
+                        document.head.appendChild(l);
+                    });
+                }
+            });
+        }
         return this;
     },
     renderList: function() {
-        $('#content').html(new App.UserIndexContainerView({
-            model: this.users,
-            sortField: this.sortField,
-            sortDirection: this.sortDirection
-        }).el);
-        $('.timeago', $('#content')).timeago();
+        var self = this;
+        self.current_page = (!_.isUndefined(self.current_page)) ? self.current_page : 1;
+        var users = new App.UserCollection();
+        users.url = api_url + 'users.json?page=' + self.current_page;
+        users.fetch({
+            cache: false,
+            abortPending: true,
+            success: function(users, response) {
+                $('#content').html(new App.UserIndexContainerView({
+                    model: users,
+                    filter_count: response.filter_count,
+                    roles: response.roles,
+                    sortField: self.sortField,
+                    sortDirection: self.sortDirection
+                }).el);
+            }
+        });
     },
     sortBy: function(e) {
         e.preventDefault();

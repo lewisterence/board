@@ -4,7 +4,7 @@
  *	App.boards						: this object contain all boards(Based on logged in user)
  *	this.model						: user model.
  */
-if (typeof App == 'undefined') {
+if (typeof App === 'undefined') {
     App = {};
 }
 /**
@@ -54,9 +54,9 @@ App.ForgotpasswordView = Backbone.View.extend({
                         trigger: true,
                         replace: true
                     });
-                    self.flash('success', response.success);
+                    self.flash('success', i18next.t('An email has been sent with your new password.'));
                 } else {
-                    self.flash('danger', response.error);
+                    self.flash('danger', i18next.t('No record found.'));
                 }
             }
         });

@@ -4,7 +4,7 @@
  *	App.boards						: this object contain all boards(Based on logged in user)
  *	this.model						: activity model and it's related values
  */
-if (typeof App == 'undefined') {
+if (typeof App === 'undefined') {
     App = {};
 }
 App.AdminActivityIndexView = Backbone.View.extend({
@@ -20,9 +20,11 @@ App.AdminActivityIndexView = Backbone.View.extend({
         emojify.run();
     },
     template: JST['templates/admin_activity_index'],
-    converter: new Showdown.converter(),
+    converter: new showdown.Converter({
+        extensions: ['targetblank', 'xssfilter']
+    }),
     tagName: 'li',
-    className: 'row col-xs-12',
+    className: 'row col-xs-12 activity-github-styles',
     /**
      * Events
      * functions to fire on events (Mouse events, Keyboard Events, Frame/Object Events, Form Events, Drag Events, etc...)
@@ -38,22 +40,12 @@ App.AdminActivityIndexView = Backbone.View.extend({
      *
      */
     render: function() {
-        var current_user_can_undo_it = false;
-        if (!_.isUndefined(App.boards) && !_.isEmpty(this.model) && !_.isUndefined(this.model.attributes.board_id) && !_.isUndefined(App.boards.get(this.model.attributes.board_id))) {
-            var board_users = App.boards.get(this.model.attributes.board_id).attributes.users;
-            _.each(board_users, function(board_user) {
-                if (parseInt(board_user.user_id) === parseInt(authuser.user.id) && board_user.is_admin === true) {
-                    current_user_can_undo_it = true;
-                }
-            });
-        }
+        this.converter.setFlavor('github');
         this.$el.html(this.template({
             activity: this.model,
             type: 'all',
             converter: this.converter,
-            current_user_can_undo_it: current_user_can_undo_it
         }));
-        this.$('.timeago').timeago();
     },
     /**
      * undo_all()
@@ -68,7 +60,7 @@ App.AdminActivityIndexView = Backbone.View.extend({
         this.model.save({}, {
             patch: true,
             success: function(model, response) {
-                self.flash('danger', "Undo Succeed");
+                self.flash('danger', i18next.t('Undo Succeed'));
                 emojify.run();
             }
         });

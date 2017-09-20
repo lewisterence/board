@@ -4,7 +4,7 @@
  *	App.boards						: this object contain all boards(Based on logged in user)
  *	this.model						: card model and it's related values. It contain all card based object @see Available Object in App.CardView
  */
-if (typeof App == 'undefined') {
+if (typeof App === 'undefined') {
     App = {};
 }
 /**
@@ -21,6 +21,12 @@ App.ArchivedCardView = Backbone.View.extend({
     initialize: function() {
         if (!_.isUndefined(this.model) && this.model !== null) {
             this.model.showImage = this.showImage;
+            var board_user_role_id = this.model.board_users.findWhere({
+                user_id: parseInt(authuser.user.id)
+            });
+            if (!_.isEmpty(board_user_role_id)) {
+                this.model.board_user_role_id = board_user_role_id.attributes.board_user_role_id;
+            }
         }
         this.render();
     },
@@ -43,7 +49,8 @@ App.ArchivedCardView = Backbone.View.extend({
      */
     render: function() {
         this.$el.html(this.template({
-            card: this.model,
+            card: this.model
+            //board: this.model.list.collection.board
         }));
         this.showTooltip();
         return this;
@@ -65,5 +72,5 @@ App.ArchivedCardView = Backbone.View.extend({
         this.model.url = api_url + 'boards/' + this.model.attributes.board_id + '/lists/' + this.model.attributes.list_id + '/cards/' + this.model.attributes.id + '.json';
         this.model.destroy();
         return false;
-    },
+    }
 });

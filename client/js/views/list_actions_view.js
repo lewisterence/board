@@ -4,7 +4,7 @@
  *	App.boards						: this object contain all boards(Based on logged in user)
  *	this.model						: list model. It contain all list based object @see Available Object in App.ListView
  */
-if (typeof App == 'undefined') {
+if (typeof App === 'undefined') {
     App = {};
 }
 /**
@@ -29,6 +29,28 @@ App.ListActionsView = Backbone.View.extend({
     template: JST['templates/list_actions'],
     tagName: 'ul',
     className: 'dropdown-menu dropdown-menu-right arrow arrow-right js-list-actions-response',
+    /**
+     * Events
+     * functions to fire on events (Mouse events, Keyboard Events, Frame/Object Events, Form Events, Drag Events, etc...)
+     */
+    events: {
+        'click .js-show-list-color-settings': 'showColorPicker',
+
+    },
+    /**
+     * showColorPicker()
+     * show color picker
+     * @param e
+     * @type Object(DOM event)
+     * @return false
+     *
+     */
+    showColorPicker: function(e) {
+        e.preventDefault();
+        $(e.target).parents('div.dropdown').addClass('open');
+        $('.js-show-list-color-settings-dropdown').addClass('open');
+        return false;
+    },
     /**
      * render()
      * populate the html to the dom

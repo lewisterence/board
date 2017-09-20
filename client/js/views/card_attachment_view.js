@@ -4,7 +4,7 @@
  *	App.boards						: this object contain all boards(Based on logged in user)
  *	this.model						: card attachment model. It contain all card based object @see Available Object in App.CardView
  */
-if (typeof App == 'undefined') {
+if (typeof App === 'undefined') {
     App = {};
 }
 /**
@@ -15,7 +15,8 @@ if (typeof App == 'undefined') {
  */
 App.CardAttachmentView = Backbone.View.extend({
     template: JST['templates/card_attachment'],
-    initialize: function() {
+    initialize: function(options) {
+        this.model.board = options.board;
         if (!_.isUndefined(this.model) && this.model !== null) {
             this.model.showImage = this.showImage;
             this.model.downloadLink = this.downloadLink;

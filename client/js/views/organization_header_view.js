@@ -4,7 +4,7 @@
  *	App.boards						: this object contain all boards(Based on logged in user)
  *	this.model						: organization model.
  */
-if (typeof App == 'undefined') {
+if (typeof App === 'undefined') {
     App = {};
 }
 /**
@@ -79,7 +79,7 @@ App.OrganizationHeaderView = Backbone.View.extend({
     editOrganization: function(e) {
         if (!$.trim($('#inputOrganizationName').val()).length) {
             $('.error-msg').remove();
-            $('<div class="error-msg text-primary h6">Whitespace alone not allowed</div>').insertAfter('#inputOrganizationName');
+            $('<div class="error-msg text-primary h6">' + i18next.t('Whitespace is not allowed') + '</div>').insertAfter('#inputOrganizationName');
             return false;
         } else {
             $('.error-msg').remove();
@@ -92,7 +92,12 @@ App.OrganizationHeaderView = Backbone.View.extend({
             this.model.save(data, {
                 patch: true,
                 success: function(model, response) {
-
+                    var organization = auth_user_organizations.findWhere({
+                        id: parseInt(model.id)
+                    });
+                    if (!_.isEmpty(organization)) {
+                        organization.set("name", data.name);
+                    }
                 }
             });
         }
@@ -111,7 +116,7 @@ App.OrganizationHeaderView = Backbone.View.extend({
         organization.url = api_url + 'organizations/' + this.model.organization_id + '.json';
         organization.set('id', this.model.organization_id);
         organization.destroy();
-        this.flash('success', 'Organization deleted successfully');
+        this.flash('success', i18next.t('Organization deleted successfully.'));
         app.navigate('#/organizations', {
             trigger: true,
             replace: true

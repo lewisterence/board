@@ -4,7 +4,7 @@
  *	App.boards						: this object contain all boards(Based on logged in user)
  *	this.model						: user model.
  */
-if (typeof App == 'undefined') {
+if (typeof App === 'undefined') {
     App = {};
 }
 /**
@@ -24,6 +24,7 @@ App.CardSearchUsersResultView = Backbone.View.extend({
         }
         this.is_added_user = options.is_added_user;
         this.added_user = options.added_user;
+        this.board = options.board;
         this.render();
     },
     template: JST['templates/card_search_users_result'],
@@ -38,7 +39,8 @@ App.CardSearchUsersResultView = Backbone.View.extend({
         this.el = this.template({
             user: this.model,
             is_added_user: this.is_added_user,
-            added_user: this.added_user
+            added_user: this.added_user,
+            board: this.board
         });
         this.showTooltip();
         return this;

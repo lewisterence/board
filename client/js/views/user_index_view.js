@@ -4,7 +4,7 @@
  *	App.boards						: this object contain all boards(Based on logged in user)
  *	this.model						: user model.
  */
-if (typeof App == 'undefined') {
+if (typeof App === 'undefined') {
     App = {};
 }
 /**
@@ -30,6 +30,7 @@ App.UserIndex = Backbone.View.extend({
         'click .js-unblock-user': 'unBlockUser',
         'click .js-remove-user': 'removeUser',
         'click .js-all-user-activities': 'showUserActivities',
+        'submit .js-admin-change-password': 'changePassword',
     },
     /**
      * Constructor
@@ -108,6 +109,33 @@ App.UserIndex = Backbone.View.extend({
         }
     },
     /**
+     * changePassword()
+     * update user password
+     * @return false
+     */
+    changePassword: function(e) {
+        var target = $(e.target);
+        var data = target.serializeObject();
+        target[0].reset();
+        var user = new App.User();
+        var self = this;
+        user.url = api_url + 'users/' + this.model.attributes.id + '/adminchangepassword.json';
+        user.save(data, {
+            success: function(model, response) {
+                if (response.error) {
+                    if (parseInt(response.error) === 1) {
+                        self.flash('danger', i18next.t('Unable to change password. Please try again.'));
+                    } else if (parseInt(response.error) === 2) {
+                        self.flash('danger', i18next.t('New and confirm password field must match, please try again.'));
+                    }
+                } else {
+                    self.flash('success', i18next.t('Password has been changed successfully.'));
+                }
+            }
+        });
+        return false;
+    },
+    /**
      * noAction()
      * @param e
      * @type Object(DOM event)
@@ -139,10 +167,10 @@ App.UserIndex = Backbone.View.extend({
      */
     blockUser: function(e) {
         e.preventDefault();
-        this.model.set('is_active', false);
+        this.model.set('is_active', 0);
         this.model.url = api_url + 'users/' + this.model.attributes.id + '.json';
         this.model.save({
-            is_active: false
+            is_active: 0
         }, {
             patch: true
         });
@@ -154,10 +182,10 @@ App.UserIndex = Backbone.View.extend({
      */
     unBlockUser: function(e) {
         e.preventDefault();
-        this.model.set('is_active', true);
+        this.model.set('is_active', 1);
         this.model.url = api_url + 'users/' + this.model.attributes.id + '.json';
         this.model.save({
-            is_active: true
+            is_active: 1
         }, {
             patch: true
         });
@@ -171,7 +199,7 @@ App.UserIndex = Backbone.View.extend({
         e.preventDefault();
         this.$el.remove();
         this.model.url = api_url + 'users/' + this.model.attributes.id + '.json';
-        this.flash('success', 'User deleted successfully.');
+        this.flash('success', i18next.t('User deleted successfully.'));
         this.model.destroy();
     },
     showUserActivities: function(e) {

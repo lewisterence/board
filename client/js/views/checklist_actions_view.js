@@ -4,7 +4,7 @@
  *	App.boards						: this object contain all boards(Based on logged in user)
  *	this.model						: checklist model. It contain all checklist based object @see Available Object in App.CardCheckListView
  */
-if (typeof App == 'undefined') {
+if (typeof App === 'undefined') {
     App = {};
 }
 /**
@@ -28,7 +28,7 @@ App.ChecklistActionsView = Backbone.View.extend({
     tagName: 'a',
     className: 'js-show-confirm-checklist-delete',
     attributes: {
-        'title': 'Delete This Checklist',
+        'title': i18next.t('Delete This Checklist'),
         'href': '#'
     },
     /**

@@ -16,66 +16,23 @@ $(window).resize(function() {
 });
 var $dc = $(document);
 $dc.ready(function() {
-    if ($.cookie('_geo') === null) {
-        $.ajax({
-            type: 'GET',
-            url: '//freegeoip.net/json/',
-            dataType: 'JSONP',
-            cache: true,
-            success: function(data) {
-                data.country_code = (data.country_code !== undefined && data.country_code !== null) ? data.country_code : "";
-                data.region = (data.region_name !== undefined && data.region_name !== null) ? data.region_name : "";
-                data.city = (data.city !== undefined && data.city !== null) ? data.city : "";
-                data.latitude = (data.latitude !== undefined && data.latitude !== null) ? data.latitude : "";
-                data.longitude = (data.longitude !== undefined && data.longitude !== null) ? data.longitude : "";
-                var geo = data.country_code + '|' + data.region + '|' + data.city + '|' + data.latitude + '|' + data.longitude;
-                $.cookie('_geo', geo, {
-                    expires: 100,
-                    path: '/'
-                });
-            }
-        });
-    }
     $dc.on('click', '.js-cancel-organization', function(e) {
         var target = $(e.target);
         target.parents('li.dropdown').removeClass('open');
         return false;
     }).on('click', '.js-start', function(e) {
-        var actionSheet = $(".action-sheet");
-        /* Grazie a modernizr riprendo il nome dell'evento di fine animazione, che cambia a seconda del browser */
-        var endTransitionName = {
-            'WebkitTransition': 'webkitTransitionEnd',
-            'OTransition': 'oTransitionEnd',
-            'msTransition': 'MSTransitionEnd',
-            'transition': 'transitionend'
-        };
-        var transitionEventName = endTransitionName[Modernizr.prefixed('transition')];
-        var X = $(this).attr('id');
-        if (X == 1) {
+        var actionSheet = $('.action-sheet');
+        if ($('#footer').hasClass('action-open')) {
             setTimeout(function() {
-                actionSheet.removeClass("open"); //aggiungiamo la classe 'open' per avviare l'aniamzione
+                actionSheet.removeClass('open');
             }, 10);
-            $(this).attr('id', '0');
-            $("#footer").removeClass("action-open");
+            $('#footer').removeClass('action-open');
         } else {
             setTimeout(function() {
-                actionSheet.addClass("open"); //aggiungiamo la classe 'open' per avviare l'aniamzione
+                actionSheet.addClass('open');
             }, 10);
-            $(this).attr('id', '1');
-            $("#footer").addClass("action-open");
+            $('#footer').addClass('action-open');
         }
-    }).on('click', '.cancel', function(e) {
-        var _endTransitionName = {
-            'WebkitTransition': 'webkitTransitionEnd',
-            'OTransition': 'oTransitionEnd',
-            'msTransition': 'MSTransitionEnd',
-            'transition': 'transitionend'
-        };
-        var _transitionEventName = _endTransitionName[Modernizr.prefixed('transition')];
-        var _actionSheet = $(".action-sheet");
-        _actionSheet.removeClass("open").one(_transitionEventName, function() {
-            _actionSheet.hide();
-        });
     }).on('click', '.js-edit-organization', function(e) {
         $('.js-organization-view-block').hide();
         $('.js-organization-edit-block').show();
@@ -102,6 +59,9 @@ $dc.ready(function() {
         });
         return false;
     });
+    if ((navigator.userAgent.toLowerCase().indexOf('android') > -1) && (navigator.userAgent.toLowerCase().indexOf('chrome') > -1)) {
+        $('body').append('<div class="modal fade" id="add_home_modal" tabindex="-1" role="dialog" aria-hidden="false"><div class="modal-dialog"><div class="modal-content"><div class="modal-header"><button type="button" class="close" data-dismiss="modal"><span aria-hidden="true" id="js-cssilize-close">x</span><span class="sr-only">Close</span></button><div class="media list-group-item-heading"><div class="media-body"><h4 class="modal-title" id="exampleModalLabel">Install this webapp to your phone</h4></div></div></div><div class="modal-body import-block"><ul><li>Add Restyaboard to homescreen.</li><li>Tap <i class="icon-ellipsis-vertical"></i>to bring up your browser menu and select \'Add to homescreen\' to pin the Restyaboard web app.</li></ul></div></div></div></div>');
+    }
 });
 (function($) {
     $.fn.serializeObject = function() {
@@ -130,11 +90,34 @@ $dc.ready(function() {
         });
         return o;
     };
+
+    $.fn.getCursorPosition = function() {
+        var el = $(this).get(0);
+        var pos = 0;
+        var posEnd = 0;
+        if ('selectionStart' in el) {
+            pos = el.selectionStart;
+            posEnd = el.selectionEnd;
+        } else if ('selection' in document) {
+            el.focus();
+            var Sel = document.selection.createRange();
+            var SelLength = document.selection.createRange().text.length;
+            Sel.moveStart('character', -el.value.length);
+            pos = Sel.text.length - SelLength;
+            posEnd = Sel.text.length;
+        }
+        return [pos, posEnd];
+    };
 })
 (jQuery);
 
 function changeTitle(title) {
-    document.title = SITE_NAME + "'s Restyaboard" + " | " + title;
+    if (title !== undefined) {
+        document.title = i18next.t("%s's Restyaboard | %s", {
+            postProcess: 'sprintf',
+            sprintf: [SITE_NAME, title]
+        });
+    }
 }
 
 function checkKeycode(keycode, c) {
@@ -144,34 +127,24 @@ function checkKeycode(keycode, c) {
 }
 
 function makeLink(text, board_id) {
-    var matches = text.match(/#(\d+)/g);
-    if (matches !== undefined && matches !== null) {
-        $.each(matches, function(key, val) {
-            var temp = val.split('#');
-            if (temp['1'] !== undefined) {
-                var cardLink = '<a class="js-open-card-view" data-card_id="' + temp['1'] + '" href="#/board/' + board_id + '/card/' + temp['1'] + '">' + val + '</a>';
-                text = text.replace(val, cardLink);
-            }
-        });
-        return text;
-    } else {
-        var split_text = text.split(" ");
-        var ret_text = '';
-        if (split_text[0].match(/^@/)) {
-            for (var i = 0; i < split_text.length; i++) {
-                if (i === 0) {
-                    ret_text += '<span class="atMention">' + split_text[0] + '</span>' + " ";
-                } else {
-                    ret_text += " " + split_text[i];
-                }
-            }
-        } else {
-            ret_text = text;
-        }
-        return ret_text;
-    }
+    text = text.replace(/#(\d+)/g, '<a class="js-open-card-view" data-card_id="$1" href="#/board/' + board_id + '/card/$1">#$1</a>');
+    text = text.replace(/(?!\b)(@\w+\b)/g, '<span class="atMention">$1</span>');
+    return text;
 }
 
 var favicon = new Favico({
     animation: 'popFade'
 });
+
+function parse_date(dateTime, logged_user) {
+    var obj = {};
+    var s = dateTime.replace("T", " ");
+    s = moment.tz(s, SITE_TIMEZONE);
+    var tz = s;
+    if (logged_user && logged_user.user) {
+        tz = moment.tz(s, logged_user.user.timezone);
+    }
+    obj.datetime = tz.format();
+    obj.timeago = tz.fromNow();
+    return obj;
+}
