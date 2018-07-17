@@ -575,8 +575,8 @@ function executeQuery($qry, $arr = array())
 function sendMail($template, $replace_content, $to, $reply_to_mail = '')
 {
     global $r_debug, $db_lnk, $_server_domain_url;
-    if (file_exists(APP_PATH . '/tmp/cache/site_url_for_shell.php')) {
-        include_once APP_PATH . '/tmp/cache/site_url_for_shell.php';
+    if (file_exists(SITE_URL_FOR_SHELL)) {
+        include_once SITE_URL_FOR_SHELL;
     }
     $default_content = array(
         '##SITE_NAME##' => SITE_NAME,
@@ -602,7 +602,7 @@ function sendMail($template, $replace_content, $to, $reply_to_mail = '')
         $headers.= "Content-Type: text/html; charset=UTF-8" . PHP_EOL;
         $headers.= "X-Mailer: Restyaboard (0.6.5; +http://restya.com/board)" . PHP_EOL;
         $headers.= "X-Auto-Response-Suppress: All" . PHP_EOL;
-        $result = mail($to, $subject, $message, $headers);
+        $result = mail($to, $subject, $message, $headers, '-f' . DEFAULT_FROM_EMAIL_ADDRESS);
         if (R_DEBUG) {
             if (!$result) {
                 $compose_string = 'F, ' . $from_email . ', ' . $to . ', ' . $subject;
@@ -1934,8 +1934,8 @@ function email2name($email)
 function findAndReplaceVariables($activity)
 {
     global $_server_domain_url;
-    if (file_exists(APP_PATH . '/tmp/cache/site_url_for_shell.php')) {
-        include_once APP_PATH . '/tmp/cache/site_url_for_shell.php';
+    if (file_exists(SITE_URL_FOR_SHELL)) {
+        include_once SITE_URL_FOR_SHELL;
     }
     $data = array(
         '##ORGANIZATION_LINK##' => $activity['organization_name'],

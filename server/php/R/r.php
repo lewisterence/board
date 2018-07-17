@@ -1735,8 +1735,8 @@ function r_get($r_resource_cmd, $r_resource_vars, $r_resource_filters)
     case '/apps/settings':
         $content = file_get_contents(APP_PATH . '/client/apps/' . $r_resource_filters['app'] . '/app.json');
         $data = json_decode($content, true);
-        if (file_exists(APP_PATH . '/tmp/cache/site_url_for_shell.php')) {
-            include_once APP_PATH . '/tmp/cache/site_url_for_shell.php';
+        if (file_exists(SITE_URL_FOR_SHELL)) {
+            include_once SITE_URL_FOR_SHELL;
         }
         if (!empty($data['settings_from_db'])) {
             $fields = $data['settings_from_db'];
@@ -2312,7 +2312,7 @@ function r_post($r_resource_cmd, $r_resource_vars, $r_resource_filters, $r_post)
     case '/users/login': //users login
         $table_name = 'users';
         $val_arr = array(
-            strtolower($r_post['email'])
+            $r_post['email']
         );
         $log_user = executeQuery('SELECT id, role_id, password, is_ldap::boolean::int FROM users WHERE email = $1 or username = $1', $val_arr);
         if (is_plugin_enabled('r_ldap_login')) {
@@ -2324,7 +2324,7 @@ function r_post($r_resource_cmd, $r_resource_vars, $r_resource_filters, $r_post)
         if (!empty($log_user) && $log_user['is_ldap'] == 0) {
             $r_post['password'] = crypt($r_post['password'], $log_user['password']);
             $val_arr = array(
-                strtolower($r_post['email']) ,
+                $r_post['email'],
                 $r_post['password'],
                 1
             );
@@ -3848,6 +3848,10 @@ function r_post($r_resource_cmd, $r_resource_vars, $r_resource_filters, $r_post)
                                     if (!file_exists($mediadir)) {
                                         mkdir($mediadir, 0777, true);
                                     }
+                                    if (file_exists($mediadir . DIRECTORY_SEPARATOR . $file['name'][$i])) {
+                                        $file_arr = pathinfo($file['name'][$i]);
+                                        $file['name'][$i] = $file_arr['basename'] . '-' . mt_rand(0, 999) . '.' . $file_arr['extension'];
+                                    }
                                     if (is_uploaded_file($file['tmp_name'][$i]) && move_uploaded_file($file['tmp_name'][$i], $mediadir . DIRECTORY_SEPARATOR . $file['name'][$i])) {
                                         $r_post[$i]['path'] = $save_path . DIRECTORY_SEPARATOR . $file['name'][$i];
                                         $r_post[$i]['name'] = $file['name'][$i];
@@ -4223,6 +4227,10 @@ function r_post($r_resource_cmd, $r_resource_vars, $r_resource_filters, $r_post)
                 mkdir($mediadir, 0777, true);
             }
             $file = $_FILES['attachment'];
+            if (file_exists($mediadir . DIRECTORY_SEPARATOR . $file['name'])) {
+                $file_arr = pathinfo($file['name']);
+                $file['name'] = $file_arr['basename'] . '-' . mt_rand(0, 999) . '.' . $file_arr['extension'];
+            }
             if (is_uploaded_file($file['tmp_name']) && move_uploaded_file($file['tmp_name'], $mediadir . DIRECTORY_SEPARATOR . $file['name'])) {
                 $r_post['path'] = $save_path . '/' . $file['name'];
                 $r_post['name'] = $file['name'];
@@ -4257,6 +4265,10 @@ function r_post($r_resource_cmd, $r_resource_vars, $r_resource_filters, $r_post)
                 if ($file['name'][$i] != 'undefined') {
                     if (!file_exists($mediadir)) {
                         mkdir($mediadir, 0777, true);
+                    }
+                    if (file_exists($mediadir . DIRECTORY_SEPARATOR . $file['name'][$i])) {
+                        $file_arr = pathinfo($file['name'][$i]);
+                        $file['name'][$i] = $file_arr['basename'] . '-' . mt_rand(0, 999) . '.' . $file_arr['extension'];
                     }
                     if (is_uploaded_file($file['tmp_name'][$i]) && move_uploaded_file($file['tmp_name'][$i], $mediadir . DIRECTORY_SEPARATOR . $file['name'][$i])) {
                         $r_post[$i]['path'] = $save_path . DIRECTORY_SEPARATOR . $file['name'][$i];
