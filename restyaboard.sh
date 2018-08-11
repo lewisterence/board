@@ -295,16 +295,19 @@
 			set -x
 			case "${answer}" in
 				[Yy])
-				apt-get install debian-keyring debian-archive-keyring
-				error_code=$?
-				if [ ${error_code} != 0 ]
+				if ([ "$OS_REQUIREMENT" = "Debian" ])
 				then
-					echo "debian-keyring installation failed with error code ${error_code} (debian-keyring installation failed with error code 1)"
+					sed -i -e 's/deb cdrom/#deb cdrom/g' /etc/apt/sources.list
+					sh -c 'echo "deb http://ftp.de.debian.org/debian jessie main" > /etc/apt/sources.list.d/debjessie.list'
+					apt install apt-transport-https lsb-release ca-certificates -y
+					wget -O /etc/apt/trusted.gpg.d/php.gpg https://packages.sury.org/php/apt.gpg
+					echo "deb https://packages.sury.org/php/ $(lsb_release -sc) main" | tee /etc/apt/sources.list.d/php.list
 				fi
-				
+				apt-get install debian-keyring debian-archive-keyring -y
 				apt-get update -y
 				apt-get upgrade -y
-				apt-get install python-software-properties software-properties-common -y
+				apt-get install python-software-properties -y
+				apt-get install software-properties-common -y
 				add-apt-repository ppa:ondrej/php
 				apt-get update -y
 				apt-get install libjpeg8 -y --allow-unauthenticated
@@ -563,24 +566,6 @@
 
 				get_geoip_data
 				
-				apt-get install -y autotools-dev
-
-				apt-get install -y automake
-
-				apt-get install -y erlang
-
-				apt-get install -y libyaml-dev
-
-				apt-get install -y rebar
-
-				cd /opt
-				wget http://liquidtelecom.dl.sourceforge.net/project/expat/expat/2.1.1/expat-2.1.1.tar.bz2
-				tar -jvxf expat-2.1.1.tar.bz2
-				cd expat-2.1.1/
-				./configure
-				make
-				make install
-
 				echo "Downloading Restyaboard script..."
 				apt-get install -y curl
 				mkdir ${DOWNLOAD_DIR}
@@ -1027,19 +1012,6 @@
 						return 47
 					fi
 				fi
-
-				yum install -y git
-				git clone git://github.com/rebar/rebar.git
-				cd rebar
-				./bootstrap
-
-				yum install -y gcc glibc-devel make ncurses-devel openssl-devel autoconf expat-devel
-
-				cd /opt
-				wget http://erlang.org/download/otp_src_R15B01.tar.gz
-				tar zxvf otp_src_R15B01.tar.gz
-				cd otp_src_R15B01
-				./configure && make && make install
 
 				yum install -y php-xml
 

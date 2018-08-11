@@ -705,7 +705,7 @@ App.ModalCardView = Backbone.View.extend({
      */
     cancelCardDescEditForm: function(e) {
         this.$el.find('.js-show-card-desc').next().show();
-        this.$el.find('#cardDescriptionEditForm').hide();
+        this.$el.find('#cardDescriptionEditForm').addClass('hide');
         return false;
     },
     showMemberSearchKeyDown: function(e) {
@@ -913,6 +913,9 @@ App.ModalCardView = Backbone.View.extend({
                         self.model.cards.add(self.model);
                     }
                     if (!_.isEmpty(data.due_date)) {
+                        if (!_.isEmpty(response.child_cards) && !_.isUndefined(response.child_cards)) {
+                            $('main').trigger('dueDateRendered', response.child_cards);
+                        }
                         self.model.list.collection.board.lists.each(function(list) {
                             var cards = list.get('cards') || [];
                             if (!_.isEmpty(cards)) {
@@ -1091,6 +1094,7 @@ App.ModalCardView = Backbone.View.extend({
                         i++;
                     });
                 });
+                $('body').trigger('modalCardRendered', self.model.id, self.model);
             }).defer();
             this.$el.find('#inputAddComment').val(comment).focus();
             this.$el.find('#inputCarddescriptions').val(description).focus();
@@ -1155,6 +1159,7 @@ App.ModalCardView = Backbone.View.extend({
                 postProcess: 'sprintf',
                 sprintf: [_.escape(this.model.attributes.name), _.escape(this.model.list.attributes.name), subscribed]
             });
+            var is_modalCard_close = false;
             var class_name = '';
             if (parseInt(this.model.attributes.is_archived) === 1) {
                 class_name = ' label label-warning';
@@ -1259,30 +1264,50 @@ App.ModalCardView = Backbone.View.extend({
                     });
                     self.$el.find('.js-modal-settings').removeClass('hide');
                 },
-                close: function(event, dialog) {
-                    $('#js-card-' + self.model.id).removeClass('active');
-                    var current_param = Backbone.history.fragment;
-                    if (current_param.indexOf('board/') != -1) {
-                        card_ids_ref = _.without(card_ids_ref, self.model.id);
-                        if (current_param.indexOf(',' + self.model.id) != -1) {
-                            current_param = current_param.replace(',' + self.model.id, '');
-                        } else if (current_param.indexOf(self.model.id + ',') != -1) {
-                            current_param = current_param.replace(self.model.id + ',', '');
-                        } else if (current_param.indexOf('/card/' + self.model.id) != -1) {
-                            current_param = current_param.replace('/card/' + self.model.id, '');
-                            changeTitle('Board - ' + _.escape(App.current_board.attributes.name));
-                        } else {
-                            var board_id = window.location.hash.split("/");
-                            current_param = 'board/' + board_id['2'];
-                            changeTitle('Board - ' + _.escape(App.current_board.attributes.name));
-                        }
-                        app.navigate('#/' + current_param, {
-                            trigger: false,
-                            trigger_function: false,
-                        });
-                        event.remove();
+                beforeClose: function(event, dialog) {
+                    var description;
+                    var comment = $('#js-card-modal-' + self.model.id).find('#inputAddComment').val();
+                    if ($('#js-card-modal-' + self.model.id).find('#cardDescriptionEditForm').hasClass('hide')) {
+                        description = '';
+                    } else {
+                        description = $('#js-card-modal-' + self.model.id).find('#inputCarddescriptions').val();
                     }
-                    self.model.unbind('change:list_id');
+                    if (!_.isEmpty(comment) || !_.isEmpty(description)) {
+                        if (window.confirm(i18next.t('You have unsaved changes on this card. Do you want to close this card and discard your changes or stay on this card?'))) {
+                            is_modalCard_close = true;
+                        } else {
+                            return false;
+                        }
+                    } else {
+                        is_modalCard_close = true;
+                    }
+                },
+                close: function(event, dialog) {
+                    if (is_modalCard_close) {
+                        $('#js-card-' + self.model.id).removeClass('active');
+                        var current_param = Backbone.history.fragment;
+                        if (current_param.indexOf('board/') != -1) {
+                            card_ids_ref = _.without(card_ids_ref, self.model.id);
+                            if (current_param.indexOf(',' + self.model.id) != -1) {
+                                current_param = current_param.replace(',' + self.model.id, '');
+                            } else if (current_param.indexOf(self.model.id + ',') != -1) {
+                                current_param = current_param.replace(self.model.id + ',', '');
+                            } else if (current_param.indexOf('/card/' + self.model.id) != -1) {
+                                current_param = current_param.replace('/card/' + self.model.id, '');
+                                changeTitle('Board - ' + _.escape(App.current_board.attributes.name));
+                            } else {
+                                var board_id = window.location.hash.split("/");
+                                current_param = 'board/' + board_id['2'];
+                                changeTitle('Board - ' + _.escape(App.current_board.attributes.name));
+                            }
+                            app.navigate('#/' + current_param, {
+                                trigger: false,
+                                trigger_function: false,
+                            });
+                            event.remove();
+                        }
+                        self.model.unbind('change:list_id');
+                    }
                 }
             });
         } else {
@@ -1353,7 +1378,7 @@ App.ModalCardView = Backbone.View.extend({
                     i++;
                 });
             });
-            $('body').trigger('cardRendered', self.model.id, self.model);
+            $('body').trigger('modalCardRendered', self.model.id, self.model);
         }).defer();
         if (!_.isUndefined(authuser.user)) {
             $('#js-card-checklists', this.$el).sortable({
