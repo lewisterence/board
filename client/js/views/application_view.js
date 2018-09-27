@@ -292,6 +292,7 @@ App.ApplicationView = Backbone.View.extend({
                 success: function(model, response) {
                     if (!_.isUndefined(response.error)) {
                         $.cookie('redirect_link', window.location.hash);
+                        changeTitle('Board not found');
                         $('#content').html(new App.Board404View({
                             model: authuser
                         }).el);
@@ -354,6 +355,9 @@ App.ApplicationView = Backbone.View.extend({
                                 $('.js-switch-timeline-view').trigger('click');
                             }).defer();
                             view_type = null;
+                        } else if (view_type === 'report') {
+                            $('div.js-board-view-' + self.id).html('<div class="well-sm"></div><div class="col-lg-12 col-md-12 col-sm-12 col-xs-12 well-lg"><div class="panel panel-default"><div class="panel-body text-center"><i class="fa fa-cog fa-spin"></i><h4 class="lead">' + i18next.t('Loading ....') + '</h4></div></div></div>');
+                            view_type = null;
                         } else if (view_type === 'attachments') {
                             $('.js-show-board-modal').trigger('click');
                             view_type = null;
@@ -381,7 +385,7 @@ App.ApplicationView = Backbone.View.extend({
                         }
                         var current_param = Backbone.history.fragment;
                         var current_param_split = current_param.split('/');
-                        if (current_param.indexOf('list') === -1 && current_param.indexOf('calendar') === -1 && current_param.indexOf('gantt') === -1) {
+                        if (current_param.indexOf('list') === -1 && current_param.indexOf('calendar') === -1 && current_param.indexOf('gantt') === -1 && current_param.indexOf('report') === -1) {
                             $('a.js-switch-grid-view').parent().addClass('active');
                         }
                     }
@@ -389,6 +393,7 @@ App.ApplicationView = Backbone.View.extend({
                 },
                 error: function(model, response) {
                     $.cookie('redirect_link', window.location.hash);
+                    changeTitle('Board not found');
                     $('#content').html(new App.Board404View({
                         model: authuser
                     }).el);
@@ -411,6 +416,9 @@ App.ApplicationView = Backbone.View.extend({
                 _(function() {
                     $('.js-switch-timeline-view').trigger('click');
                 }).defer();
+                view_type = null;
+            } else if (view_type === 'report') {
+                $('div.js-board-view-' + self.id).html('<div class="well-sm"></div><div class="col-lg-12 col-md-12 col-sm-12 col-xs-12 well-lg"><div class="panel panel-default"><div class="panel-body text-center"><i class="fa fa-cog fa-spin"></i><h4 class="lead">' + i18next.t('Loading ....') + '</h4></div></div></div>');
                 view_type = null;
             } else if (view_type === 'attachments') {
                 $('.js-show-board-modal').trigger('click');
@@ -437,11 +445,16 @@ App.ApplicationView = Backbone.View.extend({
             cache: false,
             abortPending: true,
             success: function(model, response) {
-                if (!_.isUndefined(response.error) && response.error.message == 'Unauthorized') {
-                    app.navigate('#/users/login', {
-                        trigger: true,
-                        replace: true
+                if (!_.isUndefined(response.error) && response.error.message === 'Unauthorized') {
+                    $.cookie('redirect_link', window.location.hash);
+                    changeTitle('Organization not found');
+                    $('#content').html(new App.Organization404View({
+                        model: authuser
+                    }).el);
+                    this.headerView = new App.HeaderView({
+                        model: authuser
                     });
+                    $('#header').html(this.headerView.el);
                 } else {
                     Organization.boards.add(Organization.attributes.boards_listing);
                     Organization.organization_user_roles = response.organization_user_roles;
@@ -1075,7 +1088,9 @@ App.ApplicationView = Backbone.View.extend({
                 $('#js-navbar-default').remove();
                 if (!_.isEmpty(authuser.user) && authuser.user.role_id == 1 && !_.isEmpty(page.options.name)) {
                     _(function() {
-                        $('#content').html(new App['admin_' + page.options.name + '_view']().el);
+                        if (!_.isUndefined(App['admin_' + page.options.name + '_view'])) {
+                            $('#content').html(new App['admin_' + page.options.name + '_view']().el);
+                        }
                     }).defer();
                 } else {
                     app.navigate('#/boards', {
@@ -1088,9 +1103,11 @@ App.ApplicationView = Backbone.View.extend({
                 $('#js-navbar-default').remove();
                 if (!_.isEmpty(authuser.user) && authuser.user) {
                     var app_page = page.options.name + '_' + page.options.page;
-                    _(function() {
-                        $('#content').html(new App[app_page]().el);
-                    }).defer();
+                    if (!_.isUndefined(App.app_page)) {
+                        _(function() {
+                            $('#content').html(new App[app_page]().el);
+                        }).defer();
+                    }
                 } else {
                     app.navigate('#/boards', {
                         trigger: true,

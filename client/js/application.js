@@ -202,6 +202,17 @@ callbackTranslator = {
                         model: authuser
                     }).el);
                     return;
+                } else if (!_.isUndefined(current_url) && current_url['1'] == 'organization') {
+                    $.cookie('redirect_link', window.location.hash);
+                    changeTitle('Organization not found');
+                    this.headerView = new App.HeaderView({
+                        model: authuser
+                    });
+                    $('#header').html(this.headerView.el);
+                    $('#content').html(new App.Organization404View({
+                        model: authuser
+                    }).el);
+                    return;
                 }
             } else {
                 return callback.call(null, model, resp, options);
@@ -450,8 +461,10 @@ var AppRouter = Backbone.Router.extend({
                 delete(App.boards);
                 custom_fields = {};
                 $.removeCookie('chat_initialize');
+                $.removeCookie('filter');
                 localforage.removeItem('r_zapier_access_token');
                 localforage.removeItem('board_filter');
+                localforage.removeItem('unreaded_cards');
                 api_token = '';
                 authuser = new App.User();
                 app.navigate('#/users/login', {
@@ -568,8 +581,8 @@ var AppRouter = Backbone.Router.extend({
         });
     },
     user_view_type: function(id, type) {
-        var Auth_check = JSON.parse($.cookie('auth'));
-        if ($.cookie('auth') !== null) {
+        if ($.cookie('auth') !== null && !_.isUndefined($.cookie('auth')) && !_.isEmpty($.cookie('auth'))) {
+            var Auth_check = JSON.parse($.cookie('auth'));
             if (Auth_check.user.id == id || Auth_check.user.role_id == '1' || type === 'cards' || type === "profile") {
                 new App.ApplicationView({
                     model: 'user_view',
