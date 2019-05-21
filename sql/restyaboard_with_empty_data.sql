@@ -7056,4 +7056,3 @@ ALTER TABLE ONLY public.states
 --
 -- PostgreSQL database dump complete
 --
-
