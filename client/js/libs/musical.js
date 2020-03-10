@@ -161,7 +161,9 @@ var Instrument = (function() {
     // Disconnect the audio graph for this instrument.
     if (this._out) {
       this._out.disconnect();
-      initvolume = this._out.gain.value;
+      if(this._out){
+        initvolume = this._out.gain.value;
+      }
     }
 
     // Reinitialize the audio graph: all audio for the instrument
@@ -338,7 +340,7 @@ var Instrument = (function() {
         } else if (releasetime <= attacktime) {
           // Release before attack is done?  Interrupt ramp up.
           g.gain.linearRampToValueAtTime(
-            amp * (releasetime - starttime) / (attacktime - starttime));
+            amp * (releasetime - starttime) / (attacktime - starttime), releasetime);
         } else {
           // Release during decay?  Interrupt decay down.
           g.gain.setValueAtTime(amp * (timbre.sustain + (1 - timbre.sustain) *
