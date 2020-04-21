@@ -100,7 +100,7 @@ function r_get($r_resource_cmd, $r_resource_vars, $r_resource_filters)
             );
             $role_links = executeQuery('SELECT * FROM role_links_listing WHERE id = $1', $qry_val_arr);
             $response = array_merge($response, $role_links);
-            $files = glob(APP_PATH . '/client/locales/*/translation.json', GLOB_BRACE);
+            $files = glob(APP_PATH . '/client/locales/*/translation.json');
             $lang_iso2_codes = array();
             foreach ($files as $file) {
                 $folder = explode(DS, $file);
@@ -116,7 +116,7 @@ function r_get($r_resource_cmd, $r_resource_vars, $r_resource_filters)
                 $languages[$row['iso2']] = $row['name'];
             }
             $response['languages'] = json_encode($languages);
-            $files = glob(APP_PATH . DS . 'client' . DS . 'apps' . DS . '*' . DS . 'app.json', GLOB_BRACE);
+            $files = glob(APP_PATH . DS . 'client' . DS . 'apps' . DS . '*' . DS . 'app.json');
             if (!empty($files)) {
                 foreach ($files as $file) {
                     $content = file_get_contents($file);
@@ -1030,7 +1030,7 @@ function r_get($r_resource_cmd, $r_resource_vars, $r_resource_filters)
             $timezones[] = $timezones_row;
         }
         $response[]['timezones'] = $timezones;
-        $files = glob(APP_PATH . '/client/locales/*/translation.json', GLOB_BRACE);
+        $files = glob(APP_PATH . '/client/locales/*/translation.json');
         $lang_iso2_codes = array();
         foreach ($files as $file) {
             $folder = explode(DS, $file);
@@ -1790,7 +1790,7 @@ function r_get($r_resource_cmd, $r_resource_vars, $r_resource_filters)
         break;
 
     case '/workflow_templates':
-        $files = glob(APP_PATH . DS . 'client' . DS . 'js' . DS . 'workflow_templates' . DS . '*.json', GLOB_BRACE);
+        $files = glob(APP_PATH . DS . 'client' . DS . 'js' . DS . 'workflow_templates' . DS . '*.json');
         foreach ($files as $file) {
             $data = file_get_contents($file);
             $json = json_decode($data, true);
@@ -1906,7 +1906,7 @@ function r_get($r_resource_cmd, $r_resource_vars, $r_resource_filters)
         while ($row = pg_fetch_assoc($s_sql)) {
             $response[$row['name']] = $row['value'];
         }
-        $files = glob(APP_PATH . DS . 'client' . DS . 'apps' . DS . '*' . DS . 'app.json', GLOB_BRACE);
+        $files = glob(APP_PATH . DS . 'client' . DS . 'apps' . DS . '*' . DS . 'app.json');
         if (!empty($files)) {
             foreach ($files as $file) {
                 $content = file_get_contents($file);
@@ -1962,7 +1962,7 @@ function r_get($r_resource_cmd, $r_resource_vars, $r_resource_filters)
         break;
 
     case '/apps':
-        $files = glob(APP_PATH . DS . 'client' . DS . 'apps' . DS . '*' . DS . 'app.json', GLOB_BRACE);
+        $files = glob(APP_PATH . DS . 'client' . DS . 'apps' . DS . '*' . DS . 'app.json');
         if (!empty($files)) {
             foreach ($files as $file) {
                 $folder = explode(DS, $file);
@@ -2749,7 +2749,7 @@ function r_post($r_resource_cmd, $r_resource_vars, $r_resource_filters, $r_post)
                 pg_query_params($db_lnk, 'INSERT INTO user_logins (created, modified, user_id, ip_id, user_agent, is_login_failed) VALUES (now(), now(), $1, $2, $3, $4)', $val_arr);
             }
             // login failed error logged
-            $login_fail_string = date('Y-m-d H:i:s') . '|' . $last_login_ip_id . '|' . $r_post['email'] . '|' . $user_agent;
+            $login_fail_string = date('Y-m-d H:i:s') . '|' . $_SERVER['REMOTE_ADDR'] . '|' . $r_post['email'] . '|' . $user_agent;
             error_log($login_fail_string . PHP_EOL, 3, CACHE_PATH . DS . 'user_logins_failed.log');
             if (!empty($ldap_error)) {
                 $response = array(
@@ -7872,17 +7872,23 @@ function r_delete($r_resource_cmd, $r_resource_vars, $r_resource_filters)
         );
         $attachment = executeQuery('SELECT name, path FROM card_attachments WHERE id =  $1', $qry_val_arr);
         if (!empty($attachment)) {
-            $file = APP_PATH . DS . $attachment['path'];
+            $file = MEDIA_PATH . DS . $attachment['path'];
             if (file_exists($file)) {
                 unlink($file);
             }
             foreach ($thumbsizes['CardAttachment'] as $key => $value) {
                 $file_ext = explode('.', $attachment['name']);
                 $hash = md5(SECURITYSALT . 'CardAttachment' . $r_resource_vars['attachments'] . $file_ext[1] . $key);
-                $thumb_file = IMG_PATH . DS . $key . DS . 'Organization' . DS . $r_resource_vars['attachments'] . '.' . $hash . '.' . $file_ext[1];
+                $thumb_file = IMG_PATH . DS . $key . DS . 'CardAttachment' . DS . $r_resource_vars['attachments'] . '.' . $hash . '.' . $file_ext[1];
                 if (file_exists($thumb_file)) {
                     unlink($thumb_file);
                 }
+            }
+            $file_ext = explode('.', $attachment['name']);
+            $hash = md5(SECURITYSALT . 'CardAttachment' . $r_resource_vars['attachments'] . $file_ext[1] . $key);
+            $thumb_file = IMG_PATH . DS . 'original' . DS . 'CardAttachment' . DS . $r_resource_vars['attachments'] . '.' . $hash . '.' . $file_ext[1];
+            if (file_exists($thumb_file)) {
+                unlink($thumb_file);
             }
         }
         break;
