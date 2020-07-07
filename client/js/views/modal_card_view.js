@@ -769,7 +769,8 @@ App.ModalCardView = Backbone.View.extend({
             }
         });
         labels = labels.substr(0, labels.length - 1);
-        $('.js-show-card-label-form-response').html(new App.CardLabelFormView({
+        $('.js-show-card-label-form-response').html('');
+        $('.js-show-card-label-form-response').append(new App.CardLabelFormView({
             model: labels,
             card: this.model
         }).el);
@@ -2959,7 +2960,7 @@ App.ModalCardView = Backbone.View.extend({
         var self = this;
         var is_edit_labels;
         if (!_.isUndefined(authuser.user) && (authuser.user.role_id == 1 || !_.isEmpty(this.model.list.collection.board.acl_links.where({
-                slug: "delete_labels",
+                slug: "add_labels",
                 board_user_role_id: parseInt(this.model.list.board_user_role_id)
             })))) {
             is_edit_labels = true;
@@ -3224,10 +3225,10 @@ App.ModalCardView = Backbone.View.extend({
                 slug: "unsubscribe_card"
             })) && this.model.list.collection.board.attributes.board_visibility == 2))) {
             if (view_subscribe.length == 1) {
-                view_subscribe.append('	<a class="btn btn-default ' + subscribe_disabled + ' ' + subscribe_class + ' even-action htruncate" title=" ' + i18next.t(subscribe_title) + '" href="javascript:void(0);"><i class="icon-eye-close"></i> ' + i18next.t('Unsubsribe') + '</a>');
+                view_subscribe.append('	<a class="btn btn-default ' + subscribe_disabled + ' ' + subscribe_class + ' even-action htruncate" title=" ' + i18next.t(subscribe_title) + '" href="javascript:void(0);"><i class="icon-eye-close"></i> ' + i18next.t('Unsubscribe') + '</a>');
             }
             if (view_headdropsubscribe.length == 1) {
-                view_headdropsubscribe.append(' <a class="' + subscribe_class + '" title="' + subscribe_title + '" href="javascript:void(0);"> ' + i18next.t('Unsubsribe') + ' <i class="icon-ok"></i></a>');
+                view_headdropsubscribe.append(' <a class="' + subscribe_class + '" title="' + subscribe_title + '" href="javascript:void(0);"> ' + i18next.t('Unsubscribe') + ' <i class="icon-ok"></i></a>');
                 view_headdropsubscribe.addClass(subscribe_disabled);
 
             }

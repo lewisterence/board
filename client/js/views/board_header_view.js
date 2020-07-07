@@ -62,7 +62,6 @@ App.BoardHeaderView = Backbone.View.extend({
         this.model.cards.bind('change:checklist_item_completed_count', this.updateListView, this);
         this.model.cards.bind('add:labels', this.updateListView, this);
         this.model.cards.bind('change:labels', this.updateListView, this);
-        this.model.cards.bind('change:is_filtered', this.switchListView, this);
         this.model.cards.bind('change:is_filtered', this.switchCalendarView, this);
         this.model.cards.bind('add:users', this.updateListView, this);
         this.model.cards.bind('change:users', this.updateListView, this);
@@ -2330,7 +2329,6 @@ App.BoardHeaderView = Backbone.View.extend({
             data = {
                 'auto_subscribe_on_card': false
             };
-            $('div.js-card-attachment-image').addClass('hide');
             $('.js-auto_subscribe_on_card-enabled').addClass('hide');
             $('.js-auto_subscribe_on_card-enable').removeClass('hide');
             this.model.set('auto_subscribe_on_card', false);
@@ -2338,7 +2336,6 @@ App.BoardHeaderView = Backbone.View.extend({
             data = {
                 'auto_subscribe_on_card': true
             };
-            $('div.js-card-attachment-image').removeClass('hide');
             $('.js-auto_subscribe_on_card-enabled').removeClass('hide');
             $('.js-auto_subscribe_on_card-enable').addClass('hide');
             this.model.set('auto_subscribe_on_card', true);
